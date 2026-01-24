@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Vote - Voter Registration | मतदाता दर्ता</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="registration-card">
+            <div class="logo">
+                <h1>🗳️ E-Vote</h1>
+            </div>
+            
+            <!-- English Form -->
+            <div class="form-section" id="english-form">
+                <h2>Voter Registration</h2>
+                <p class="form-subtitle">Please provide your details to proceed</p>
+                
+                <form id="registration-form-en" class="registration-form">
+                    <div class="form-group">
+                        <label for="voter-id-en">Voter ID <span class="required">*</span></label>
+                        <input 
+                            type="text" 
+                            id="voter-id-en" 
+                            name="voterId" 
+                            placeholder="Enter your Voter ID"
+                            required
+                            pattern="[A-Za-z0-9]{6,12}"
+                            title="Voter ID must be 6-12 alphanumeric characters"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="full-name-en">Full Name <span class="required">*</span></label>
+                        <input 
+                            type="text" 
+                            id="full-name-en" 
+                            name="fullName" 
+                            placeholder="Enter your full name"
+                            required
+                            minlength="3"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="dob-en">Date of Birth (BS) <span class="required">*</span></label>
+                        <input 
+                            type="text" 
+                            id="dob-en" 
+                            name="dateOfBirth" 
+                            placeholder="YYYY/MM/DD (BS Format - e.g., 2080/01/15)"
+                            required
+                            pattern="[0-9]{4}/[0-9]{1,2}/[0-9]{1,2}"
+                            title="BS Date Format: YYYY/MM/DD (e.g., 2080/01/15)"
+                            class="nepali-date-picker"
+                        >
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='language.html'">
+                            ← Back
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Continue to Ballot →
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Nepali Form -->
+            <div class="form-section" id="nepali-form" style="display: none;">
+                <h2>मतदाता दर्ता</h2>
+                <p class="form-subtitle">कृपया अगाडि बढ्नको लागि आफ्नो विवरण प्रदान गर्नुहोस्</p>
+                
+                <form id="registration-form-np" class="registration-form">
+                    <div class="form-group">
+                        <label for="voter-id-np">
+                            मतदाता आईडी <span class="required">*</span>
+                            <span class="label-english">Voter ID</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="voter-id-np" 
+                            name="voterId" 
+                            placeholder="आफ्नो मतदाता आईडी प्रविष्ट गर्नुहोस्"
+                            required
+                            pattern="[A-Za-z0-9]{6,12}"
+                            title="मतदाता आईडी ६-१२ अक्षर/संख्या हुनुपर्छ"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="full-name-np">
+                            पूरा नाम <span class="required">*</span>
+                            <span class="label-english">Full Name</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="full-name-np" 
+                            name="fullName" 
+                            placeholder="आफ्नो पूरा नाम प्रविष्ट गर्नुहोस्"
+                            required
+                            minlength="3"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="dob-np">
+                            जन्म मिति <span class="required">*</span>
+                            <span class="label-english">Date of Birth (BS)</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="dob-np" 
+                            name="dateOfBirth" 
+                            placeholder="YYYY/MM/DD (BS Format - e.g., 2080/01/15)"
+                            required
+                            pattern="[0-9]{4}/[0-9]{1,2}/[0-9]{1,2}"
+                            title="BS Date Format: YYYY/MM/DD (e.g., 2080/01/15)"
+                            class="nepali-date-picker"
+                        >
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='language.html'">
+                            ← फिर्ता
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            मतपत्रमा जानुहोस् →
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Language Toggle -->
+            <div class="language-toggle">
+                <button class="lang-btn active" id="lang-en">English</button>
+                <button class="lang-btn" id="lang-np">नेपाली</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/language.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

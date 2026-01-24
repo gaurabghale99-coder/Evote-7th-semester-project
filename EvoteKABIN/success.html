@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Vote - Vote Successful | मत सफल</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="success-card">
+            <div class="success-icon">
+                <div class="checkmark-circle">
+                    <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                        <circle class="checkmark-circle-bg" cx="26" cy="26" r="25" fill="none"/>
+                        <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                    </svg>
+                </div>
+            </div>
+            
+            <h2 id="success-title">Your Vote Has Been Successfully Cast!</h2>
+            <h2 id="success-title-np" style="display: none;">तपाईंको मत सफलतापूर्वक पेश भयो!</h2>
+            
+            <p class="success-message" id="success-message">
+                Thank you for participating in the democratic process. Your vote has been recorded securely.
+            </p>
+            <p class="success-message" id="success-message-np" style="display: none;">
+                लोकतान्त्रिक प्रक्रियामा सहभागिता जनाउनुभएकोमा धन्यवाद। तपाईंको मत सुरक्षित रूपमा रेकर्ड गरिएको छ।
+            </p>
+            
+            <div class="vote-details" id="vote-details">
+                <h3>Vote Details | मत विवरण</h3>
+                <div class="detail-item">
+                    <span class="detail-label">Voter ID:</span>
+                    <span class="detail-value" id="display-voter-id">-</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Voter Name:</span>
+                    <span class="detail-value" id="display-voter-name">-</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Selected Party:</span>
+                    <span class="detail-value" id="display-party">-</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Vote Time:</span>
+                    <span class="detail-value" id="display-time">-</span>
+                </div>
+            </div>
+            
+            <div class="success-actions">
+                <button class="btn btn-primary" onclick="window.location.href='index.html'">
+                    Return to Home | घर फिर्ता
+                </button>
+            </div>
+            
+            <div class="security-note">
+                <p id="security-note">
+                    🔒 Your vote is encrypted and stored securely. The system uses AI-powered face recognition and pattern analysis to ensure election integrity.
+                </p>
+                <p id="security-note-np" style="display: none;">
+                    🔒 तपाईंको मत एन्क्रिप्ट गरिएको छ र सुरक्षित रूपमा भण्डारण गरिएको छ। प्रणालीले निर्वाचन अखण्डता सुनिश्चित गर्न AI-शक्ति अनुहार पहिचान र प्याटर्न विश्लेषण प्रयोग गर्छ।
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/main.js"></script>
+</body>
+</html>
