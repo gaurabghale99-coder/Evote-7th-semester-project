@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Vote - Welcome | स्वागत</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="admin-bar">
+        <button type="button" class="admin-button" id="admin-button">Admin</button>
+    </div>
+    <div class="container">
+        <div class="welcome-card">
+            <div class="logo">
+                <h1>🗳️ E-Vote</h1>
+            </div>
+
+            <!-- Combined Bilingual Content -->
+            <div class="content-section">
+                <h2>Welcome to E-Vote System<br>ई-भोट प्रणालीमा स्वागत छ</h2>
+
+                <div class="face-recognition-section">
+                    <div class="face-recognition-card" id="face-recognition-card">
+                        <div class="face-icon">👤</div>
+                        <h3>Face Recognition | अनुहार पहिचान</h3>
+                        <p>Complete your face recognition to proceed with voting<br>मतदान अगाडि बढ्नको लागि आफ्नो अनुहार
+                            पहिचान पूरा गर्नुहोस्</p>
+                        <button class="btn btn-primary" id="start-face-recognition">
+                            Start Face Recognition | अनुहार पहिचान सुरु गर्नुहोस्
+                        </button>
+                    </div>
+
+                    <div class="face-recognition-status" id="face-status" style="display: none;">
+                        <div class="status-icon">✅</div>
+                        <p>Face recognition completed<br>अनुहार पहिचान पूरा भयो</p>
+                    </div>
+                </div>
+
+                <!-- Display recognized user info -->
+                <div class="user-info" id="user-info" style="display: none;">
+                    <p>Name: <span id="user-name"></span></p>
+                    <p>Voter ID: <span id="user-voterCode"></span></p>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-success" id="proceed-btn" disabled>
+                        Proceed to Voting | मतदानमा अगाडि बढ्नुहोस्
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div class="admin-modal" id="admin-modal" style="display: none;">
+        <div class="admin-modal-content">
+            <button class="admin-close" id="admin-close" aria-label="Close admin panel">×</button>
+
+            <div id="admin-auth">
+                <h3>Admin Access</h3>
+                <p class="admin-subtext">Enter password to continue</p>
+                <div class="admin-form-group">
+                    <label for="admin-password">Password</label>
+                    <input type="password" id="admin-password" placeholder="Enter admin password">
+                </div>
+                <button class="btn btn-primary admin-submit" id="admin-auth-submit">Continue</button>
+                <p class="admin-error" id="admin-auth-error" style="display: none;">Incorrect password. Try again.</p>
+            </div>
+
+            <div id="admin-dashboard" style="display: none;">
+                <h3>Admin Dashboard</h3>
+                <div class="admin-tabs">
+                    <button class="admin-tab active" data-target="admin-update">Update</button>
+                    <button class="admin-tab" data-target="admin-results">Total Result</button>
+                    <button class="admin-tab" data-target="admin-voters">Total Voter List</button>
+                </div>
+
+                <!-- Update Section -->
+                <div class="admin-section" id="admin-update">
+                    <div class="admin-section-header">
+                        <h4>Manage Parties</h4>
+                        <p>Add or delete parties and candidate names.</p>
+                    </div>
+                    <div class="admin-content-scroll">
+                        <form id="admin-add-party-form" class="admin-form-grid">
+                            <div class="admin-form-group">
+                                <label for="party-name">Party name</label>
+                                <input type="text" id="party-name" placeholder="e.g., Independent Candidate" required>
+                            </div>
+                            <div class="admin-form-group">
+                                <label for="party-candidate">Candidate name</label>
+                                <input type="text" id="party-candidate" placeholder="e.g., Lila Karki" required>
+                            </div>
+                            <div class="admin-form-group">
+                                <label for="party-symbol">Symbol/emoji (optional)</label>
+                                <input type="text" id="party-symbol" placeholder="e.g., 🐟">
+                            </div>
+                            <div class="admin-form-actions">
+                                <button type="submit" class="btn btn-primary">Add party</button>
+                            </div>
+                        </form>
+
+                        <div class="admin-delete-block">
+                            <label for="admin-delete-select">Delete a party</label>
+                            <div class="admin-delete-row">
+                                <select id="admin-delete-select"></select>
+                                <button class="btn btn-danger" id="admin-delete-button">Delete</button>
+                            </div>
+                            <p class="admin-subtext">Deleting a party removes it from the ballot.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="admin-section" id="admin-results" style="display: none;">
+                    <div class="admin-section-header">
+                        <h4>Kathmandu District Results</h4>
+                        <p>Parliamentary constituencies 1–10</p>
+                        <button class="btn btn-secondary admin-refresh" id="admin-refresh-results">Refresh</button>
+                    </div>
+                    <div class="results-scroll-wrapper admin-content-scroll">
+                        <div id="results-summary" class="results-summary"></div>
+                        <div class="chart-section">
+                            <div class="chart-header">
+                                <h5>Chart</h5>
+                                <p class="admin-subtext">Vote share by constituency</p>
+                            </div>
+                            <div id="results-chart" class="storage-chart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voter List Section -->
+                <div class="admin-section" id="admin-voters" style="display: none;">
+                    <div class="admin-section-header">
+                        <h4>Total Voter List</h4>
+                        <p>Registered voters eligible to cast vote</p>
+                        <button class="btn btn-secondary admin-refresh" id="admin-refresh-voters">Refresh</button>
+                    </div>
+                    <div class="admin-content-scroll">
+                        <div id="voter-summary" class="voter-summary"></div>
+                        <div class="voter-table-wrapper">
+                            <table class="voter-table" id="voter-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Voter ID</th>
+                                        <th>Name</th>
+                                        <th>Date of Birth (BS)</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS Script -->
+    <script src="js/main.js"></script>
+</body>
+
+</html>
