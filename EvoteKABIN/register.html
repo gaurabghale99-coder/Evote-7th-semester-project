@@ -20,17 +20,18 @@
                 <h2>Voter Registration</h2>
                 <p class="form-subtitle">Please provide your details to proceed</p>
 
-                <form id="registration-form-en" class="registration-form">
+                <form id="registration-form-en" class="registration-form" autocomplete="off">
                     <div class="form-group">
                         <label for="voter-id-en">Voter ID <span class="required">*</span></label>
                         <input type="text" id="voter-id-en" name="voterId" placeholder="Enter your Voter ID" required
-                            pattern="[A-Za-z0-9]{4,12}" title="Voter ID must be 4-12 alphanumeric characters">
+                            pattern="[A-Za-z0-9]{4,12}" title="Voter ID must be 4-12 alphanumeric characters"
+                            autocomplete="off">
                     </div>
 
                     <div class="form-group">
                         <label for="full-name-en">Full Name <span class="required">*</span></label>
                         <input type="text" id="full-name-en" name="fullName" placeholder="Enter your full name" required
-                            minlength="3">
+                            minlength="3" autocomplete="off">
                     </div>
 
                     <div class="form-group">
@@ -38,7 +39,8 @@
                         <input type="text" id="dob-en" name="dateOfBirth"
                             placeholder="YYYY/MM/DD (BS Format - e.g., 2080/01/15)" required
                             pattern="[0-9]{4}/[0-9]{1,2}/[0-9]{1,2}"
-                            title="BS Date Format: YYYY/MM/DD (e.g., 2080/01/15)" class="nepali-date-picker">
+                            title="BS Date Format: YYYY/MM/DD (e.g., 2080/01/15)" class="nepali-date-picker"
+                            autocomplete="off">
                     </div>
 
                     <div class="form-actions">
@@ -57,7 +59,7 @@
                 <h2>मतदाता दर्ता</h2>
                 <p class="form-subtitle">कृपया अगाडि बढ्नको लागि आफ्नो विवरण प्रदान गर्नुहोस्</p>
 
-                <form id="registration-form-np" class="registration-form">
+                <form id="registration-form-np" class="registration-form" autocomplete="off">
                     <div class="form-group">
                         <label for="voter-id-np">
                             मतदाता आईडी <span class="required">*</span>
@@ -65,7 +67,7 @@
                         </label>
                         <input type="text" id="voter-id-np" name="voterId"
                             placeholder="आफ्नो मतदाता आईडी प्रविष्ट गर्नुहोस्" required pattern="[A-Za-z0-9]{4,12}"
-                            title="मतदाता आईडी ४-१२ अक्षर/संख्या हुनुपर्छ">
+                            title="मतदाता आईडी ४-१२ अक्षर/संख्या हुनुपर्छ" autocomplete="off">
                     </div>
 
                     <div class="form-group">
@@ -74,7 +76,7 @@
                             <span class="label-english">Full Name</span>
                         </label>
                         <input type="text" id="full-name-np" name="fullName"
-                            placeholder="आफ्नो पूरा नाम प्रविष्ट गर्नुहोस्" required minlength="3">
+                            placeholder="आफ्नो पूरा नाम प्रविष्ट गर्नुहोस्" required minlength="3" autocomplete="off">
                     </div>
 
                     <div class="form-group">
@@ -85,7 +87,8 @@
                         <input type="text" id="dob-np" name="dateOfBirth"
                             placeholder="YYYY/MM/DD (BS Format - e.g., 2080/01/15)" required
                             pattern="[0-9]{4}/[0-9]{1,2}/[0-9]{1,2}"
-                            title="BS Date Format: YYYY/MM/DD (e.g., 2080/01/15)" class="nepali-date-picker">
+                            title="BS Date Format: YYYY/MM/DD (e.g., 2080/01/15)" class="nepali-date-picker"
+                            autocomplete="off">
                     </div>
 
                     <div class="form-actions">
@@ -104,6 +107,16 @@
                 <button class="lang-btn active" id="lang-en">English</button>
                 <button class="lang-btn" id="lang-np">नेपाली</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Custom Error Modal -->
+    <div class="custom-modal" id="custom-error-modal" style="display: none;">
+        <div class="custom-modal-content">
+            <div class="modal-icon">⚠️</div>
+            <h3 id="custom-error-title">Error</h3>
+            <p id="custom-error-message">Something went wrong.</p>
+            <button class="btn btn-danger" id="custom-error-close">Close</button>
         </div>
     </div>
 

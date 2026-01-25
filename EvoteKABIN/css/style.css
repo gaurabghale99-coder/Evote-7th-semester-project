@@ -40,6 +40,8 @@ body {
     display: flex;
     justify-content: flex-end;
     margin-bottom: 10px;
+    position: relative;
+    z-index: 50;
 }
 
 .admin-button {
@@ -1303,5 +1305,54 @@ body {
     .ballot-card,
     .success-card {
         padding: 20px;
+    }
+}
+/* Custom Error Modal */
+.custom-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+.custom-modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    animation: slideUp 0.3s ease;
+    border-top: 5px solid var(--danger-color);
+}
+
+.modal-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+#custom-error-message {
+    color: var(--danger-color);
+    font-size: 1.1rem;
+    margin-bottom: 25px;
+    font-weight: 500;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
     }
 }

@@ -18,13 +18,26 @@ const DEFAULT_PARTIES = [
 ];
 
 document.addEventListener('DOMContentLoaded', function () {
-    initializeDataStores();
-    initializeWelcomePage();
-    initializeRegistrationPage();
-    initializeBallotPage();
-    initializeSuccessPage();
-    initializeLanguagePage();
-    initializeAdminPanel();
+    // 1. Force Redirect to Home on Refresh
+    // If we are NOT on index.html (or root), and the page was reloaded, go to index.html
+    const isIndex = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/');
+
+    // Check for reload navigation
+    const entries = performance.getEntriesByType("navigation");
+    const isReload = entries.length > 0 && entries[0].type === "reload";
+
+    if (!isIndex && isReload) {
+        window.location.href = 'index.html';
+        return; // Stop further initialization
+    }
+
+    try { initializeDataStores(); } catch (e) { console.error('DataStore Init Failed', e); }
+    try { initializeAdminPanel(); } catch (e) { console.error('Admin Panel Init Failed', e); }
+    try { initializeWelcomePage(); } catch (e) { console.error('Welcome Page Init Failed', e); }
+    try { initializeRegistrationPage(); } catch (e) { console.error('Registration Page Init Failed', e); }
+    try { initializeBallotPage(); } catch (e) { console.error('Ballot Page Init Failed', e); }
+    try { initializeSuccessPage(); } catch (e) { console.error('Success Page Init Failed', e); }
+    try { initializeLanguagePage(); } catch (e) { console.error('Language Page Init Failed', e); }
 });
 
 // ============================================
@@ -342,6 +355,35 @@ function renderBallotParties() {
     });
 }
 
+
+
+// Custom Error Modal
+function showCustomError(message) {
+    const modal = document.getElementById('custom-error-modal');
+    const msgElement = document.getElementById('custom-error-message');
+    const closeBtn = document.getElementById('custom-error-close');
+
+    if (modal && msgElement) {
+        msgElement.textContent = message;
+        modal.style.display = 'flex';
+
+        if (closeBtn) {
+            closeBtn.onclick = function () {
+                modal.style.display = 'none';
+            };
+        }
+
+        // Close on outside click
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        };
+    } else {
+        alert(message); // Fallback
+    }
+}
+
 function initializeRegistrationPage() {
     const registrationFormEn = document.getElementById('registration-form-en');
     const registrationFormNp = document.getElementById('registration-form-np');
@@ -427,20 +469,18 @@ function handleRegistration(lang) {
 
         // 1. Validate Voter ID
         if (inputId !== knownCode) {
-            alert(`DEBUG: ID Mismatch!\nRecognized: ${knownCode}\nInput: ${inputId}`);
-            // alert(lang === 'np' 
-            //     ? `गलत मतदाता परिचयपत्र नम्बर। कृपया आफ्नो दर्ता गरिएको परिचयपत्र नम्बर प्रविष्ट गर्नुहोस्।` 
-            //     : `Incorrect Voter ID. Please enter your registered Voter ID.`);
+            showCustomError(lang === 'np'
+                ? `तपाईंको मतदाता परिचयपत्र नम्बर मेल खाएन`
+                : `Your voter id does not match`);
             return;
         }
 
         // 2. Validate Name (Relaxed check: Input must contain the recognized name)
         // Recognized: "gaurab", Input: "Gaurab Ghale" -> "gaurab ghale".includes("gaurab") === true
         if (!inputName.includes(knownName)) {
-            alert(`DEBUG: Name Mismatch!\nRecognized: '${knownName}'\nInput: '${inputName}'`);
-            // alert(lang === 'np' 
-            //    ? `गलत नाम। कृपया आफ्नो दर्ता गरिएको पूरा नाम प्रविष्ट गर्नुहोस्।` 
-            //    : `Incorrect Name. Please enter your registered full name.`);
+            showCustomError(lang === 'np'
+                ? `तपाईंको मतदाता नाम मेल खाएन`
+                : `Your voter name does not match`);
             return;
         }
     }
@@ -489,6 +529,10 @@ function initializeBallotPage() {
                 // Visual selection
                 constituencyButtons.forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
+
+                // Reset party selection
+                const partyRadios = document.querySelectorAll('input[name="vote"]');
+                partyRadios.forEach(radio => radio.checked = false);
 
                 // Show ballot paper section
                 ballotPaperSection.style.display = 'block';
@@ -823,6 +867,23 @@ function setActiveAdminTab(targetId) {
     }
 }
 
+// Make Admin Modal globally accessible for inline onclick fallback
+window.openAdminModal = function () {
+    const modal = document.getElementById('admin-modal');
+    const authCard = document.getElementById('admin-auth');
+    const dashboard = document.getElementById('admin-dashboard');
+
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (authCard) authCard.style.display = 'block';
+        if (dashboard) dashboard.style.display = 'none';
+        console.log('Admin Modal Opened via Global Function');
+    } else {
+        console.error('Admin modal not found');
+    }
+};
+
 function initializeAdminPanel() {
     const adminBtn = document.getElementById('admin-button');
     const modal = document.getElementById('admin-modal');
@@ -840,28 +901,10 @@ function initializeAdminPanel() {
     }
 
     const openModal = () => {
-        if (!modal || !dashboard) {
-            console.error('Modal or dashboard not found');
-            return;
-        }
-        // Show the modal
-        modal.style.display = 'flex';
-        // Prevent background scrolling
-        document.body.style.overflow = 'hidden';
-
-        // Show authentication card logic:
-        if (authCard) {
-            authCard.style.display = 'block';
-            if (passwordInput) passwordInput.value = '';
-        }
-
-        // Hide dashboard initially
-        dashboard.style.display = 'none';
-
-        // Hide error text
-        if (errorText) {
-            errorText.style.display = 'none';
-        }
+        window.openAdminModal();
+        // Also clear password field if possible, handled in global or here
+        if (passwordInput) passwordInput.value = '';
+        if (errorText) errorText.style.display = 'none';
     };
 
     const closeModal = () => {
@@ -874,12 +917,13 @@ function initializeAdminPanel() {
     adminBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        console.log('Admin button clicked');
+        console.log('Admin button detected click (listener)');
         openModal();
-        return false;
     });
-    closeBtn && closeBtn.addEventListener('click', closeModal);
+    // ... rest of the function remains similar or we can rely on existing
+    // We need to keep the event listeners for authSubmit etc.
 
+    closeBtn && closeBtn.addEventListener('click', closeModal);
 
     authSubmit && authSubmit.addEventListener('click', () => {
         const pwd = (passwordInput.value || '').trim();

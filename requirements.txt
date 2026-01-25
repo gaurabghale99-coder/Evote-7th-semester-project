@@ -3,3 +3,7 @@ face-recognition
 numpy
 psycopg2-binary
 scipy
+fastapi
+uvicorn
+pydantic
+types-psycopg2
