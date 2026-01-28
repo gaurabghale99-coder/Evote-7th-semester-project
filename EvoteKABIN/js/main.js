@@ -127,17 +127,30 @@ function initializeWelcomePage() {
     // Always reset face recognition state on page load
     localStorage.removeItem('faceRecognitionDone');
 
+    // Reset face recognition card to initial state (stops any lingering camera stream)
+    if (faceCard) {
+        faceCard.innerHTML = `
+            <div class="face-icon">👤</div>
+            <h3>Face Recognition | अनुहार पहिचान</h3>
+            <p>Complete your face recognition to proceed with voting<br>मतदान अगाडि बढ्नको लागि आफ्नो अनुहार पहिचान पूरा गर्नुहोस्</p>
+            <button class="btn btn-primary" id="start-face-recognition">
+                Start Face Recognition | अनुहार पहिचान सुरु गर्नुहोस्
+            </button>
+        `;
+        faceCard.style.display = 'block';
+
+        // Re-binding event listener since we replaced innerHTML
+        const newStartBtn = document.getElementById('start-face-recognition');
+        if (newStartBtn) {
+            newStartBtn.addEventListener('click', function () {
+                startFaceRecognition();
+            });
+        }
+    }
+
     // Ensure initial state
     if (faceStatus) faceStatus.style.display = 'none';
-    if (faceCard) faceCard.style.display = 'block';
     if (proceedBtn) proceedBtn.disabled = true;
-
-    // Face recognition button handler
-    if (startFaceRecognitionBtn) {
-        startFaceRecognitionBtn.addEventListener('click', function () {
-            startFaceRecognition();
-        });
-    }
 
     // Proceed button handler
     if (proceedBtn) {
@@ -156,52 +169,135 @@ function startFaceRecognition() {
 
     if (faceRecognitionCard) {
         faceRecognitionCard.innerHTML = `
-            <div class="face-icon">📷</div>
-            <h3>Processing Face Recognition... | अनुहार पहिचान प्रक्रिया...</h3>
-            <p>Please look at the camera | कृपया क्यामेरामा हेर्नुहोस्</p>
+            <div class="camera-stream-container">
+                <img src="http://localhost:8000/video_feed" alt="Live Camera Feed" class="camera-stream">
+                <div class="scanning-bar"></div>
+            </div>
+            <h3>Scanning Face... | अनुहार स्क्यान गर्दै...</h3>
+            <p>Please keep your face steady.<br>कृपया आफ्नो अनुहार स्थिर राख्नुहोस्।</p>
         `;
     }
 
-    if (faceStatus) faceStatus.style.display = 'none';
+    if (faceStatus) {
+        faceStatus.style.display = 'none';
+        faceStatus.classList.remove('error');
+    }
     if (proceedBtn) proceedBtn.disabled = true;
 
-    // Replace YOUR_BACKEND_IP with your backend laptop IP
-    fetch("http://localhost:8000/face_login")
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "allowed") {
-                if (faceRecognitionCard) faceRecognitionCard.style.display = 'none';
-                if (faceStatus) {
-                    console.log("Face Login Data:", data); // Debugging
-                    const displayName = data.name.charAt(0).toUpperCase() + data.name.slice(1);
-                    faceStatus.textContent = `Welcome ${displayName}! You can vote now. | स्वागत ${displayName}! अब तपाईं मतदान गर्न सक्नुहुन्छ।`;
-                    faceStatus.style.display = 'block';
+    // Start both the backend request and a 4s timer
+    const scanDuration = 4000; // 4 seconds
 
-                    // Store voter data for later use in voting
+    const faceLoginPromise = fetch("http://localhost:8000/face_login").then(res => res.json());
+
+    const minDelayPromise = new Promise(resolve => {
+        setTimeout(() => {
+            resolve();
+        }, scanDuration);
+    });
+
+    Promise.all([faceLoginPromise, minDelayPromise])
+        .then(([data]) => {
+            // Function to clear camera stream from DOM to signal backend to release resource
+            const stopCameraStream = () => {
+                const streamImg = document.querySelector('.camera-stream');
+                if (streamImg) {
+                    streamImg.src = '';
+                    streamImg.remove();
+                }
+            };
+
+            if (data.status === "allowed") {
+                stopCameraStream(); // Clear camera immediately
+                if (faceRecognitionCard) {
+                    faceRecognitionCard.style.display = 'none';
+                }
+
+                if (faceStatus) {
+                    faceStatus.innerHTML = `
+                        <div class="status-icon">✅</div>
+                        <p>Face recognized: <strong>${data.name}</strong><br>You can vote now. | अब तपाईं मतदान गर्न सक्नुहुन्छ।</p>
+                    `;
+                    faceStatus.style.display = 'block';
+                    faceStatus.className = 'face-recognition-status success';
+
                     const currentVoter = JSON.parse(localStorage.getItem('voterData') || '{}');
-                    currentVoter.voterId = data.voter_id; // Store numeric DB ID for backend operations
-                    currentVoter.voterCode = data.voter_code; // Store string code (e.g. V001) for verification
+                    currentVoter.voterId = data.voter_id;
+                    currentVoter.voterCode = data.voter_code;
                     currentVoter.fullName = data.name;
                     localStorage.setItem('voterData', JSON.stringify(currentVoter));
                 }
                 if (proceedBtn) proceedBtn.disabled = false;
             } else if (data.status === "already_voted") {
+                stopCameraStream(); // Clear camera
+                if (faceRecognitionCard) {
+                    faceRecognitionCard.innerHTML = `
+                        <div class="status-icon">⚠️</div>
+                        <p>${data.name} has already voted! | ${data.name} ले पहिले नै मतदान गरिसके।</p>
+                        <button class="btn btn-secondary" onclick="window.location.reload()">Back | फिर्ता</button>
+                    `;
+                }
                 if (faceStatus) {
-                    faceStatus.textContent = `${data.name} has already voted! | ${data.name} ले पहिले नै मतदान गरिसके।`;
+                    faceStatus.innerHTML = `
+                        <div class="status-icon">⚠️</div>
+                        <p>${data.name} has already voted! | ${data.name} ले पहिले नै मतदान गरिसके।</p>
+                    `;
                     faceStatus.style.display = 'block';
+                    faceStatus.className = 'face-recognition-status warning';
+                }
+            } else if (data.status === "multiple_faces") {
+                stopCameraStream(); // Clear camera
+
+                // Hide the red status box
+                if (faceStatus) {
+                    faceStatus.style.display = 'none';
+                }
+
+                if (faceRecognitionCard) {
+                    // Change card background to red
+                    faceRecognitionCard.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    faceRecognitionCard.innerHTML = `
+                        <div class="face-icon">👥</div>
+                        <h3 style="color: white;">Multiple Faces Detected | धेरै अनुहार फेला परे</h3>
+                        <p style="color: white;">Only one person is allowed at a time. | एक पटकमा एक जना मात्र अनुमति छ।</p>
+                        <button class="btn btn-primary" onclick="window.location.reload()">
+                            Retry | फेरि प्रयास गर्नुहोस्
+                        </button>
+                    `;
                 }
             } else {
+                stopCameraStream(); // Clear camera
+
+                // Hide the red status box
                 if (faceStatus) {
-                    faceStatus.textContent = `Face not recognized. Please try again. | अनुहार चिनिन सकेन। कृपया फेरि प्रयास गर्नुहोस्।`;
-                    faceStatus.style.display = 'block';
+                    faceStatus.style.display = 'none';
+                }
+
+                if (faceRecognitionCard) {
+                    // Change card background to red and add inline styling
+                    faceRecognitionCard.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    faceRecognitionCard.innerHTML = `
+                        <div class="face-icon">👤</div>
+                        <h3>Recognition Failed | पहिचान विफल</h3>
+                        <p>We couldn't recognize your face. | हामीले तपाईंको अनुहार चिन्न सकेनौं।</p>
+                        <button class="btn btn-primary" onclick="window.location.reload()">
+                            Retry | फेरि प्रयास गर्नुहोस्
+                        </button>
+                    `;
                 }
             }
         })
         .catch(err => {
             console.error("Error connecting to backend:", err);
+            const streamImg = document.querySelector('.camera-stream');
+            if (streamImg) streamImg.remove();
+
             if (faceStatus) {
-                faceStatus.textContent = "Cannot connect to backend. Please check the network. | ब्याकएन्डसँग जडान हुन सकेन। नेटवर्क जाँच गर्नुहोस्।";
+                faceStatus.innerHTML = `
+                    <div class="status-icon">🚫</div>
+                    <p>Cannot connect to backend. | ब्याकएन्डसँग जडान हुन सकेन।</p>
+                `;
                 faceStatus.style.display = 'block';
+                faceStatus.className = 'face-recognition-status error';
             }
         });
 }
@@ -384,6 +480,36 @@ function showCustomError(message) {
     }
 }
 
+// Check if voter is under 18 based on BS date
+function isUnder18BS(dobString) {
+    if (!dobString) return true; // Default to blocked if empty
+
+    const cleanDob = dobString.trim().replace(/[-.]/g, '/');
+    const parts = cleanDob.split('/');
+    if (parts.length !== 3) return true;
+
+    const birthYear = parseInt(parts[0], 10);
+    const birthMonth = parseInt(parts[1], 10);
+    const birthDay = parseInt(parts[2], 10);
+
+    if (isNaN(birthYear) || isNaN(birthMonth) || isNaN(birthDay)) return true;
+
+    // Current BS date: Magh 14, 2082 (corresponds to Jan 28, 2026 AD)
+    const currentBsYear = 2082;
+    const currentBsMonth = 10;
+    const currentBsDay = 14;
+
+    let age = currentBsYear - birthYear;
+
+    // Precise age calculation
+    if (currentBsMonth < birthMonth || (currentBsMonth === birthMonth && currentBsDay < birthDay)) {
+        age--;
+    }
+
+    console.log(`Checking age: Born ${birthYear}/${birthMonth}/${birthDay}, Current ${currentBsYear}/${currentBsMonth}/${currentBsDay} -> Age: ${age}`);
+    return age < 18;
+}
+
 function initializeRegistrationPage() {
     const registrationFormEn = document.getElementById('registration-form-en');
     const registrationFormNp = document.getElementById('registration-form-np');
@@ -439,6 +565,14 @@ function handleRegistration(lang) {
         alert(lang === 'np'
             ? 'कृपया सबै फिल्डहरू भर्नुहोस्'
             : 'Please fill in all fields');
+        return;
+    }
+
+    // 2. Validate Age (Under 18)
+    if (isUnder18BS(String(voterData.dateOfBirth))) {
+        showCustomError(lang === 'np'
+            ? 'तपाईं मतदान गर्न सक्नुहुन्न'
+            : 'You cannot Vote');
         return;
     }
 
