@@ -10,7 +10,8 @@
 
 <body>
     <div class="admin-bar">
-        <button type="button" class="admin-button" id="admin-button">Admin</button>
+        <button type="button" class="admin-button" id="admin-button"
+            onclick="if(window.openAdminModal) window.openAdminModal();">Admin</button>
     </div>
     <div class="container">
         <div class="welcome-card">
@@ -162,71 +163,7 @@
     </div>
 
     <!-- JS Script -->
-    <script>
-        let voterId = null;
-
-        const startBtn = document.getElementById("start-face-recognition");
-        const proceedBtn = document.getElementById("proceed-btn");
-        const faceStatus = document.getElementById("face-status");
-        const userInfo = document.getElementById("user-info");
-        const userNameSpan = document.getElementById("user-name");
-        const userVoterSpan = document.getElementById("user-voterCode");
-
-        startBtn.addEventListener("click", () => {
-            startBtn.disabled = true;
-            startBtn.innerText = "Recognizing...";
-
-            fetch("http://localhost:8000/face_login")
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === "allowed") {
-                        faceStatus.style.display = "block";
-                        userInfo.style.display = "block";
-                        userNameSpan.innerText = data.name;
-                        userVoterSpan.innerText = data.voter_code;
-                        voterId = data.id;
-                        proceedBtn.disabled = false;
-                        startBtn.innerText = "Face Recognition Done";
-                    } else if (data.status === "already_voted") {
-                        alert(data.name + " has already voted");
-                        startBtn.disabled = false;
-                        startBtn.innerText = "Start Face Recognition";
-                    } else {
-                        alert("Face not recognized. Try again.");
-                        startBtn.disabled = false;
-                        startBtn.innerText = "Start Face Recognition";
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    alert("Error connecting to backend.");
-                    startBtn.disabled = false;
-                    startBtn.innerText = "Start Face Recognition";
-                });
-        });
-
-        proceedBtn.addEventListener("click", () => {
-            if (!voterId) return;
-            fetch("http://localhost:8000/record_vote", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ voter_id: voterId })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === "success") {
-                    alert("Vote recorded successfully!");
-                    location.reload();
-                } else {
-                    alert("Failed to record vote.");
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                alert("Error connecting to backend.");
-            });
-        });
-    </script>
+    <script src="js/main.js"></script>
 </body>
 
 </html>

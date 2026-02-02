@@ -14,52 +14,160 @@ DB_CONFIG = {
 
 TOLERANCE = 0.45  # smaller = stricter match
 
-# Recognize face once using webcam
+import threading
+import time
+
+# Camera Manager to handle all hardware and detection in one thread
+class CameraManager:
+    def __init__(self):
+        self.cap = None
+        self.latest_frame = None
+        self.recognition_result = None
+        self.multiple_faces_detected = False
+        self.running = True
+        self.active_users = 0 # Count of how many things currently need the camera
+        self.lock = threading.Lock()
+        
+        # Load known encodings once
+        self.known_encodings = []
+        self.voters = []
+        self.load_voters()
+        
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+
+    def start_camera(self):
+        with self.lock:
+            self.active_users += 1
+            if self.cap is None:
+                print("Opening camera hardware...")
+                self.cap = cv2.VideoCapture(0)
+
+    def stop_camera(self):
+        with self.lock:
+            self.active_users = max(0, self.active_users - 1)
+            if self.active_users == 0 and self.cap is not None:
+                print("Releasing camera hardware...")
+                self.cap.release()
+                self.cap = None
+                self.latest_frame = None
+
+    def load_voters(self):
+        try:
+            conn = psycopg2.connect(**DB_CONFIG)
+            cur = conn.cursor()
+            cur.execute("SELECT id, voter_code, name, face_encoding, voted FROM voters")
+            rows = cur.fetchall()
+            for vid, code, name, enc, voted in rows:
+                if enc:
+                    self.known_encodings.append(np.array(enc))
+                    self.voters.append({
+                        "id": vid, "code": code, "name": name, "voted": voted
+                    })
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"Error loading voters: {e}")
+
+    def _run(self):
+        while self.running:
+            try:
+                # Use a local reference to avoid None issues, but still check under lock
+                with self.lock:
+                    if self.cap is None:
+                        cap_is_none = True
+                    else:
+                        cap_is_none = False
+                
+                if cap_is_none:
+                    time.sleep(0.1)
+                    continue
+
+                # Perform the read operation while holding the lock to prevent simultaneous release
+                with self.lock:
+                    if self.cap is None:
+                        continue
+                    success, frame = self.cap.read()
+
+                if not success or frame is None:
+                    time.sleep(0.1)
+                    continue
+
+            # 1. Detect faces for the live green rectangle (Low res for speed)
+                rgb_small = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+                # Use color conversion for face_recognition library
+                rgb_small_converted = cv2.cvtColor(rgb_small, cv2.COLOR_BGR2RGB)
+                face_locations = face_recognition.face_locations(rgb_small_converted)
+
+                # 2. STRICT CHECK: If multiple faces detected at ANY point, invalidate everything
+                if self.active_users > 0:
+                    if len(face_locations) > 1:
+                        # Multiple faces detected - IMMEDIATELY set error and invalidate any previous result
+                        self.multiple_faces_detected = True
+                        self.recognition_result = {"multiple_faces": True}
+                    elif len(face_locations) == 1 and not self.recognition_result:
+                        # Only proceed with recognition if:
+                        # 1. Exactly one face is present
+                        # 2. No result has been set yet
+                        # 3. Multiple faces have NOT been detected previously in this session
+                        if not self.multiple_faces_detected:
+                            encs = face_recognition.face_encodings(rgb_small_converted, face_locations)
+                            if encs:
+                                dists = face_recognition.face_distance(self.known_encodings, encs[0])
+                                if len(dists) > 0:
+                                    idx = np.argmin(dists)
+                                    if dists[idx] <= TOLERANCE:
+                                        self.recognition_result = self.voters[idx]
+
+                # 3. Draw green rectangles ALWAYS for feedback
+                for (top, right, bottom, left) in face_locations:
+                    # Scale back up by 4 since we resized to 0.25
+                    top *= 4; right *= 4; bottom *= 4; left *= 4
+                    cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+
+                # 4. Store latest frame for streaming
+                ret, buffer = cv2.imencode('.jpg', frame)
+                if ret:
+                    self.latest_frame = buffer.tobytes()
+
+                # Small sleep to keep CPU usage in check
+                time.sleep(0.01)
+            except Exception as e:
+                print(f"Error in camera loop: {e}")
+                time.sleep(0.5) # Wait a bit before retrying if there's an error
+
+# Global manager instance
+manager = CameraManager()
+
+# Generate MJPEG frames for streaming
+def gen_frames():
+    manager.start_camera()
+    try:
+        while True:
+            if manager.latest_frame:
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + manager.latest_frame + b'\r\n')
+            time.sleep(0.05)
+    finally:
+        manager.stop_camera()
+
+# Recognize face once using the background result
 def recognize_face_once():
-    conn = psycopg2.connect(**DB_CONFIG)
-    cur = conn.cursor()
-
-    cur.execute("SELECT id, voter_code, name, face_encoding, voted FROM voters")
-    rows = cur.fetchall()
-
-    known_encodings = []
-    voters = []
-
-    for vid, code, name, enc, voted in rows:
-        if enc:
-            known_encodings.append(np.array(enc))
-            voters.append({
-                "id": vid,
-                "code": code,
-                "name": name,
-                "voted": voted
-            })
-
-    cap = cv2.VideoCapture(0)
-    result = None
-
-    for _ in range(60):  # 60 frames to try
-        ret, frame = cap.read()
-        if not ret:
-            continue
-
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        encs = face_recognition.face_encodings(rgb)
-
-        if len(encs) != 1:
-            continue
-
-        dists = face_recognition.face_distance(known_encodings, encs[0])
-        idx = np.argmin(dists)
-
-        if dists[idx] <= TOLERANCE:
-            result = voters[idx]
-            break
-
-    cap.release()
-    cur.close()
-    conn.close()
-    return result
+    # Signal that we need the camera for recognition
+    manager.start_camera()
+    manager.recognition_result = None
+    manager.multiple_faces_detected = False  # Reset flag for new attempt
+    
+    try:
+        start_time = time.time()
+        while time.time() - start_time < 10:
+            if manager.recognition_result:
+                return manager.recognition_result
+            time.sleep(0.1)
+    finally:
+        manager.stop_camera()
+        
+    return None
 
 # Mark voter as voted
 def mark_as_voted(voter_id):

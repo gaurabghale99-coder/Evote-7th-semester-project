@@ -1,0 +1,35 @@
+Serving HTTP on :: port 5500 (http://[::]:5500/) ...
+::1 - - [27/Jan/2026 14:31:41] code 404, message File not found
+::1 - - [27/Jan/2026 14:31:41] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [27/Jan/2026 14:37:26] "GET /js/main.js HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:37:45] "GET /index.html?cachebust=123 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:42:27] "GET /index.html?cachebust=456 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:43:00] "GET /index.html?cachebust=789 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:44:42] "GET /js/main.js?v=2 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:45:00] "GET /index.html?t=123456789 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:46:13] "GET /js/main.js?v=1769504473372 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:48:59] "GET /js/main.js?v=3 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:49:22] "GET /index.html?final_test=1 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:49:41] "GET /js/main.js?v=1769504681492 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:49:57] "GET /js/main.js?v=1769504697206 HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:54:21] "GET /js/main.js HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 14:54:21] code 404, message File not found
+::1 - - [27/Jan/2026 14:54:21] "GET /apple-touch-icon-precomposed.png HTTP/1.1" 404 -
+::1 - - [27/Jan/2026 14:54:21] code 404, message File not found
+::1 - - [27/Jan/2026 14:54:21] "GET /apple-touch-icon.png HTTP/1.1" 404 -
+::1 - - [27/Jan/2026 14:54:21] code 404, message File not found
+::1 - - [27/Jan/2026 14:54:21] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [27/Jan/2026 15:01:35] code 404, message File not found
+::1 - - [27/Jan/2026 15:01:35] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [27/Jan/2026 15:02:09] "GET /js/main.js HTTP/1.1" 304 -
+::1 - - [27/Jan/2026 15:02:30] "GET / HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 15:02:59] "GET / HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 15:03:17] "GET / HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 15:03:18] "GET /js/main.js HTTP/1.1" 304 -
+::1 - - [27/Jan/2026 15:03:23] "GET / HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 15:03:36] "GET / HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 15:05:01] "GET /index.html HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 15:05:01] "GET /css/style.css HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 15:05:01] "GET /js/main.js HTTP/1.1" 200 -
+::1 - - [27/Jan/2026 15:05:01] code 404, message File not found
+::1 - - [27/Jan/2026 15:05:01] "GET /favicon.ico HTTP/1.1" 404 -

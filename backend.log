@@ -1,0 +1,9 @@
+INFO:     Will watch for changes in these directories: ['/Users/kabinkc/Downloads/Evote-7th-semester-project-main']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [17424] using StatReload
+INFO:     Started server process [17427]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:50723 - "GET /video_feed HTTP/1.1" 200 OK
+Opening camera hardware...
+INFO:     127.0.0.1:50722 - "GET /face_login HTTP/1.1" 200 OK

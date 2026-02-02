@@ -6,28 +6,31 @@
     <title>E-Vote - Vote Successful | मत सफल</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
+    <div class="admin-bar">
+        <button type="button" class="admin-button" id="admin-button">Admin</button>
+    </div>
     <div class="container">
         <div class="success-card">
             <div class="success-icon">
                 <div class="checkmark-circle">
                     <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-                        <circle class="checkmark-circle-bg" cx="26" cy="26" r="25" fill="none"/>
-                        <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                        <circle class="checkmark-circle-bg" cx="26" cy="26" r="25" fill="none" />
+                        <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8" />
                     </svg>
                 </div>
             </div>
-            
+
             <h2 id="success-title">Your Vote Has Been Successfully Cast!</h2>
             <h2 id="success-title-np" style="display: none;">तपाईंको मत सफलतापूर्वक पेश भयो!</h2>
-            
+
             <p class="success-message" id="success-message">
                 Thank you for participating in the democratic process. Your vote has been recorded securely.
             </p>
             <p class="success-message" id="success-message-np" style="display: none;">
                 लोकतान्त्रिक प्रक्रियामा सहभागिता जनाउनुभएकोमा धन्यवाद। तपाईंको मत सुरक्षित रूपमा रेकर्ड गरिएको छ।
             </p>
-            
             <div class="vote-details" id="vote-details">
                 <h3>Vote Details | मत विवरण</h3>
                 <div class="detail-item">
@@ -47,24 +50,133 @@
                     <span class="detail-value" id="display-time">-</span>
                 </div>
             </div>
-            
             <div class="success-actions">
                 <button class="btn btn-primary" onclick="window.location.href='index.html'">
                     Return to Home | घर फिर्ता
                 </button>
             </div>
-            
+
             <div class="security-note">
                 <p id="security-note">
-                    🔒 Your vote is encrypted and stored securely. The system uses AI-powered face recognition and pattern analysis to ensure election integrity.
+                    🔒 Your vote is encrypted and stored securely. The system uses AI-powered face recognition and
+                    pattern analysis to ensure election integrity.
                 </p>
                 <p id="security-note-np" style="display: none;">
-                    🔒 तपाईंको मत एन्क्रिप्ट गरिएको छ र सुरक्षित रूपमा भण्डारण गरिएको छ। प्रणालीले निर्वाचन अखण्डता सुनिश्चित गर्न AI-शक्ति अनुहार पहिचान र प्याटर्न विश्लेषण प्रयोग गर्छ।
+                    🔒 तपाईंको मत एन्क्रिप्ट गरिएको छ र सुरक्षित रूपमा भण्डारण गरिएको छ। प्रणालीले निर्वाचन अखण्डता
+                    सुनिश्चित गर्न AI-शक्ति अनुहार पहिचान र प्याटर्न विश्लेषण प्रयोग गर्छ।
                 </p>
             </div>
         </div>
     </div>
-    
+
+    <!-- Admin Modal -->
+    <div class="admin-modal" id="admin-modal" style="display: none;">
+        <div class="admin-modal-content">
+            <button class="admin-close" id="admin-close" aria-label="Close admin panel">×</button>
+
+            <div id="admin-auth">
+                <h3>Admin Access</h3>
+                <p class="admin-subtext">Enter password to continue</p>
+                <div class="admin-form-group">
+                    <label for="admin-password">Password</label>
+                    <input type="password" id="admin-password" placeholder="Enter admin password">
+                </div>
+                <button class="btn btn-primary admin-submit" id="admin-auth-submit">Continue</button>
+                <p class="admin-error" id="admin-auth-error" style="display: none;">Incorrect password. Try again.</p>
+            </div>
+
+            <div id="admin-dashboard" style="display: none;">
+                <h3>Admin Dashboard</h3>
+                <div class="admin-tabs">
+                    <button class="admin-tab active" data-target="admin-update">Update</button>
+                    <button class="admin-tab" data-target="admin-results">Total Result</button>
+                    <button class="admin-tab" data-target="admin-voters">Total Voter List</button>
+                </div>
+
+                <!-- Update Section -->
+                <div class="admin-section" id="admin-update">
+                    <div class="admin-section-header">
+                        <h4>Manage Parties</h4>
+                        <p>Add or delete parties and candidate names.</p>
+                    </div>
+                    <div class="admin-content-scroll">
+                        <form id="admin-add-party-form" class="admin-form-grid">
+                            <div class="admin-form-group">
+                                <label for="party-name">Party name</label>
+                                <input type="text" id="party-name" placeholder="e.g., Independent Candidate" required>
+                            </div>
+                            <div class="admin-form-group">
+                                <label for="party-candidate">Candidate name</label>
+                                <input type="text" id="party-candidate" placeholder="e.g., Lila Karki" required>
+                            </div>
+                            <div class="admin-form-group">
+                                <label for="party-symbol">Symbol/emoji (optional)</label>
+                                <input type="text" id="party-symbol" placeholder="e.g., 🐟">
+                            </div>
+                            <div class="admin-form-actions">
+                                <button type="submit" class="btn btn-primary">Add party</button>
+                            </div>
+                        </form>
+
+                        <div class="admin-delete-block">
+                            <label for="admin-delete-select">Delete a party</label>
+                            <div class="admin-delete-row">
+                                <select id="admin-delete-select"></select>
+                                <button class="btn btn-danger" id="admin-delete-button">Delete</button>
+                            </div>
+                            <p class="admin-subtext">Deleting a party removes it from the ballot.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="admin-section" id="admin-results" style="display: none;">
+                    <div class="admin-section-header">
+                        <h4>Kathmandu District Results</h4>
+                        <p>Parliamentary constituencies 1–10</p>
+                        <button class="btn btn-secondary admin-refresh" id="admin-refresh-results">Refresh</button>
+                    </div>
+                    <div class="results-scroll-wrapper admin-content-scroll">
+                        <div id="results-summary" class="results-summary"></div>
+                        <div class="chart-section">
+                            <div class="chart-header">
+                                <h5>Chart</h5>
+                                <p class="admin-subtext">Vote share by constituency</p>
+                            </div>
+                            <div id="results-chart" class="storage-chart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voter List Section -->
+                <div class="admin-section" id="admin-voters" style="display: none;">
+                    <div class="admin-section-header">
+                        <h4>Total Voter List</h4>
+                        <p>Registered voters eligible to cast vote</p>
+                        <button class="btn btn-secondary admin-refresh" id="admin-refresh-voters">Refresh</button>
+                    </div>
+                    <div class="admin-content-scroll">
+                        <div id="voter-summary" class="voter-summary"></div>
+                        <div class="voter-table-wrapper">
+                            <table class="voter-table" id="voter-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Voter ID</th>
+                                        <th>Name</th>
+                                        <th>Date of Birth (BS)</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/main.js"></script>
 </body>
+
 </html>
