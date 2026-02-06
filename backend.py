@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from main import recognize_face_once, mark_as_voted, gen_frames
+from main import recognize_face_once, mark_as_voted, gen_frames, get_all_voters, get_age_group_summary
 
 app = FastAPI()
 
@@ -14,9 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Record vote endpoint
+# Record vote model
 class VoteRecord(BaseModel):
-    voter_id: int
+    voter_id: str
 
 @app.get("/video_feed")
 def video_feed():
@@ -34,9 +34,6 @@ def face_login():
     if res.get("multiple_faces") is True:
         return {"status": "multiple_faces"}
 
-    if res.get("voted") is True:
-        return {"status": "already_voted", "name": res.get("name")}
-
     return {
         "status": "allowed",
         "name": res.get("name"),
@@ -44,9 +41,7 @@ def face_login():
         "voter_code": res.get("code")
     }
 
-# Record vote endpoint
-class VoteRecord(BaseModel):
-    voter_id: int
+
 
 @app.post("/record_vote")
 def record_vote(data: VoteRecord):
@@ -54,3 +49,16 @@ def record_vote(data: VoteRecord):
     if success:
         return {"status": "success"}
     return {"status": "failed", "message": "Could not record vote or already voted"}
+
+@app.get("/all_voters")
+def all_voters():
+    voters = get_all_voters()
+    return voters
+
+@app.get("/age_group_summary")
+def age_group_summary():
+    return get_age_group_summary()
+
+
+
+

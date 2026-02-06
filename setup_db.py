@@ -39,10 +39,12 @@ try:
     cur.execute("""
         CREATE TABLE IF NOT EXISTS voters (
             id SERIAL PRIMARY KEY,
-            voter_code VARCHAR(50) UNIQUE NOT NULL,
-            name VARCHAR(100),
+            voter_id VARCHAR(50) UNIQUE NOT NULL,
+            full_name VARCHAR(100),
             face_encoding FLOAT8[],
-            voted BOOLEAN DEFAULT FALSE
+            voted BOOLEAN DEFAULT FALSE,
+            date_of_birth DATE,
+            parliamentary_constituency VARCHAR(100)
         )
     """)
     conn.commit()

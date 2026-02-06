@@ -595,7 +595,6 @@ function handleRegistration(lang) {
     if (knownVoterData.voterId && knownVoterData.fullName) {
         // Normalize for comparison (lowercase, trimmed)
         const inputId = voterData.voterId.trim().toUpperCase();
-        // Use voterCode (V001) if available, falling back to voterId for legacy/fallback
         const knownCode = (knownVoterData.voterCode || knownVoterData.voterId).toString().trim().toUpperCase();
 
         const inputName = voterData.fullName.trim().toLowerCase();
@@ -610,7 +609,6 @@ function handleRegistration(lang) {
         }
 
         // 2. Validate Name (Relaxed check: Input must contain the recognized name)
-        // Recognized: "gaurab", Input: "Gaurab Ghale" -> "gaurab ghale".includes("gaurab") === true
         if (!inputName.includes(knownName)) {
             showCustomError(lang === 'np'
                 ? `तपाईंको मतदाता नाम मेल खाएन`
@@ -946,27 +944,81 @@ function renderResultsChart() {
     `;
 }
 
+function renderAgeGroupTable() {
+    const container = document.getElementById('age-group-summary-container');
+    if (!container) return;
+
+    fetch("http://localhost:8000/age_group_summary")
+        .then(res => res.json())
+        .then(data => {
+            const order = ["18-25", "26-35", "36-45", "46-60", "60 above"];
+
+            let tableHtml = `
+                <table class="voter-table age-summary-table">
+                    <thead>
+                        <tr>
+                            <th>Age Group</th>
+                            <th>No of Voter</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            order.forEach(group => {
+                tableHtml += `
+                    <tr>
+                        <td>${group}</td>
+                        <td>${data[group] || 0}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = tableHtml;
+        })
+        .catch(err => {
+            console.error("Failed to fetch age group summary:", err);
+            container.innerHTML = "<p class='admin-error'>Failed to load age summary</p>";
+        });
+}
+
+
+
+
 function renderVoterTable() {
     const tableBody = document.querySelector('#voter-table tbody');
     const summaryBox = document.getElementById('voter-summary');
     if (!tableBody || !summaryBox) return;
 
-    const voters = getVoterList();
-    tableBody.innerHTML = '';
-
-    voters.forEach((voter, idx) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${idx + 1}</td>
-            <td>${voter.voterId || '-'}</td>
-            <td>${voter.fullName || '-'}</td>
-            <td>${voter.dateOfBirth || '-'}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-
-    summaryBox.textContent = `Total registered voters: ${voters.length}`;
+    fetch("http://localhost:8000/all_voters")
+        .then(res => res.json())
+        .then(voters => {
+            tableBody.innerHTML = '';
+            voters.forEach((voter, idx) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${idx + 1}</td>
+                    <td>${voter.voter_id || '-'}</td>
+                    <td>${voter.full_name || '-'}</td>
+                    <td>${voter.date_of_birth || '-'}</td>
+                    <td>${voter.parliamentary_constituency || '-'}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+            summaryBox.textContent = `Total registered voters: ${voters.length}`;
+        })
+        .catch(err => {
+            console.error("Failed to fetch voters:", err);
+            // Fallback to local storage if needed, or show error
+            summaryBox.textContent = "Error loading voter list";
+        });
 }
+
+
 
 function populateDeleteSelect() {
     const select = document.getElementById('admin-delete-select');
@@ -995,6 +1047,7 @@ function setActiveAdminTab(targetId) {
     if (targetId === 'admin-results') {
         renderResultsSummary();
         renderResultsChart();
+        renderAgeGroupTable();
     }
     if (targetId === 'admin-voters') {
         renderVoterTable();
@@ -1072,6 +1125,12 @@ function initializeAdminPanel() {
         }
     });
 
+    passwordInput && passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            authSubmit.click();
+        }
+    });
+
     const tabs = document.querySelectorAll('.admin-tab');
     tabs.forEach(tab => {
         tab.addEventListener('click', () => setActiveAdminTab(tab.dataset.target));
@@ -1117,6 +1176,7 @@ function initializeAdminPanel() {
         refreshResults.addEventListener('click', () => {
             renderResultsSummary();
             renderResultsChart();
+            renderAgeGroupTable();
         });
     }
 

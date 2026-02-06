@@ -56,7 +56,7 @@ class CameraManager:
         try:
             conn = psycopg2.connect(**DB_CONFIG)
             cur = conn.cursor()
-            cur.execute("SELECT id, voter_code, name, face_encoding, voted FROM voters")
+            cur.execute("SELECT id, voter_id, full_name, face_encoding, voted FROM voters")
             rows = cur.fetchall()
             for vid, code, name, enc, voted in rows:
                 if enc:
@@ -117,7 +117,9 @@ class CameraManager:
                                 if len(dists) > 0:
                                     idx = np.argmin(dists)
                                     if dists[idx] <= TOLERANCE:
-                                        self.recognition_result = self.voters[idx]
+                                        res = self.voters[idx].copy()
+                                        res["voted"] = get_voter_voted_status(res["code"])
+                                        self.recognition_result = res
 
                 # 3. Draw green rectangles ALWAYS for feedback
                 for (top, right, bottom, left) in face_locations:
@@ -135,6 +137,20 @@ class CameraManager:
             except Exception as e:
                 print(f"Error in camera loop: {e}")
                 time.sleep(0.5) # Wait a bit before retrying if there's an error
+
+# Helper to check latest voted status
+def get_voter_voted_status(voter_id):
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute("SELECT voted FROM voters WHERE voter_id = %s", (voter_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return row[0] if row else False
+    except Exception as e:
+        print(f"Error checking voted status: {e}")
+        return False
 
 # Global manager instance
 manager = CameraManager()
@@ -174,14 +190,79 @@ def mark_as_voted(voter_id):
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
 
-    cur.execute("SELECT voted FROM voters WHERE id=%s", (voter_id,))
+    cur.execute("SELECT voted FROM voters WHERE voter_id=%s", (voter_id,))
     row = cur.fetchone()
 
     if not row or row[0]:
         return False
 
-    cur.execute("UPDATE voters SET voted=TRUE WHERE id=%s", (voter_id,))
+    cur.execute("UPDATE voters SET voted=TRUE WHERE voter_id=%s", (voter_id,))
     conn.commit()
     cur.close()
     conn.close()
     return True
+
+# Get all registered voters
+def get_all_voters():
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute("SELECT voter_id, full_name, date_of_birth, parliamentary_constituency FROM voters ORDER BY id ASC")
+        rows = cur.fetchall()
+        
+        voters = []
+        for row in rows:
+            voters.append({
+                "voter_id": row[0],
+                "full_name": row[1],
+                "date_of_birth": str(row[2]),
+                "parliamentary_constituency": row[3]
+            })
+        cur.close()
+        conn.close()
+        return voters
+    except Exception as e:
+        print(f"Error fetching voters: {e}")
+        return []
+
+# Get age group votes summary
+def get_age_group_summary():
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute("SELECT date_of_birth FROM voters WHERE voted = TRUE")
+        rows = cur.fetchall()
+        
+        summary = {
+            "18-25": 0,
+            "26-35": 0,
+            "36-45": 0,
+            "46-60": 0,
+            "60 above": 0
+        }
+        
+        current_bs_year = 2082
+        
+        for row in rows:
+            dob_val = row[0]
+            if not dob_val:
+                continue
+            try:
+                dob_str = str(dob_val)
+                year = int(dob_str[:4])
+                age = current_bs_year - year
+                
+                if 18 <= age <= 25: summary["18-25"] += 1
+                elif 26 <= age <= 35: summary["26-35"] += 1
+                elif 36 <= age <= 45: summary["36-45"] += 1
+                elif 46 <= age <= 60: summary["46-60"] += 1
+                elif age > 60: summary["60 above"] += 1
+            except (ValueError, IndexError):
+                continue
+                
+        cur.close()
+        conn.close()
+        return summary
+    except Exception as e:
+        print(f"Error calculating age summary: {e}")
+        return {}
