@@ -39,18 +39,36 @@ class CameraManager:
     def start_camera(self):
         with self.lock:
             self.active_users += 1
+            print(f"Camera start requested. Active users: {self.active_users}")
             if self.cap is None:
                 print("Opening camera hardware...")
                 self.cap = cv2.VideoCapture(0)
+                # Wait a moment for camera to warm up
+                time.sleep(0.5)
 
     def stop_camera(self):
         with self.lock:
-            self.active_users = max(0, self.active_users - 1)
+            if self.active_users > 0:
+                self.active_users -= 1
+            print(f"Camera stop requested. Active users: {self.active_users}")
             if self.active_users == 0 and self.cap is not None:
                 print("Releasing camera hardware...")
                 self.cap.release()
                 self.cap = None
                 self.latest_frame = None
+                self.recognition_result = None
+                self.multiple_faces_detected = False
+
+    def force_stop(self):
+        with self.lock:
+            print("Force stopping camera...")
+            self.active_users = 0
+            if self.cap is not None:
+                self.cap.release()
+                self.cap = None
+                self.latest_frame = None
+                self.recognition_result = None
+                self.multiple_faces_detected = False
 
     def load_voters(self):
         try:
@@ -159,11 +177,20 @@ manager = CameraManager()
 def gen_frames():
     manager.start_camera()
     try:
+        # Wait up to 2 seconds for the first valid frame to avoid "black box" issue
+        start_wait = time.time()
+        while manager.latest_frame is None and time.time() - start_wait < 2:
+            time.sleep(0.1)
+            
         while True:
+            with manager.lock:
+                if manager.cap is None or manager.active_users == 0:
+                    break
+            
             if manager.latest_frame:
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + manager.latest_frame + b'\r\n')
-            time.sleep(0.05)
+            time.sleep(0.04) # ~25 FPS
     finally:
         manager.stop_camera()
 

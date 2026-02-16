@@ -50,6 +50,12 @@ def record_vote(data: VoteRecord):
         return {"status": "success"}
     return {"status": "failed", "message": "Could not record vote or already voted"}
 
+@app.get("/stop_camera")
+def stop_camera_endpoint():
+    from main import manager
+    manager.force_stop()
+    return {"status": "camera_stopped"}
+
 @app.get("/all_voters")
 def all_voters():
     voters = get_all_voters()

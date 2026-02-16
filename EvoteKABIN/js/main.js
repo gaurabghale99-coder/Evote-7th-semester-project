@@ -38,6 +38,11 @@ document.addEventListener('DOMContentLoaded', function () {
     try { initializeBallotPage(); } catch (e) { console.error('Ballot Page Init Failed', e); }
     try { initializeSuccessPage(); } catch (e) { console.error('Success Page Init Failed', e); }
     try { initializeLanguagePage(); } catch (e) { console.error('Language Page Init Failed', e); }
+
+    // Cleanup camera if the user navigates away or closes the tab
+    window.addEventListener('pagehide', function () {
+        fetch("http://localhost:8000/stop_camera").catch(() => { });
+    });
 });
 
 // ============================================
@@ -128,6 +133,7 @@ function initializeWelcomePage() {
     localStorage.removeItem('faceRecognitionDone');
 
     // Reset face recognition card to initial state (stops any lingering camera stream)
+    // Reset face recognition card to initial state
     if (faceCard) {
         faceCard.innerHTML = `
             <div class="face-icon">👤</div>
@@ -139,7 +145,7 @@ function initializeWelcomePage() {
         `;
         faceCard.style.display = 'block';
 
-        // Re-binding event listener since we replaced innerHTML
+        // Re-binding event listener
         const newStartBtn = document.getElementById('start-face-recognition');
         if (newStartBtn) {
             newStartBtn.addEventListener('click', function () {
@@ -147,6 +153,9 @@ function initializeWelcomePage() {
             });
         }
     }
+
+    // Explicitly ensure camera is off when returning to welcome page
+    fetch("http://localhost:8000/stop_camera").catch(() => { });
 
     // Ensure initial state
     if (faceStatus) faceStatus.style.display = 'none';
@@ -168,14 +177,33 @@ function startFaceRecognition() {
     const proceedBtn = document.getElementById('proceed-btn');
 
     if (faceRecognitionCard) {
+        // Cache busting for the camera stream
+        const timestamp = new Date().getTime();
         faceRecognitionCard.innerHTML = `
             <div class="camera-stream-container">
-                <img src="http://localhost:8000/video_feed" alt="Live Camera Feed" class="camera-stream">
+                <div class="camera-placeholder">
+                    <div class="spinner"></div>
+                    <p>Initializing camera...</p>
+                </div>
+                <img src="" 
+                     data-src="http://localhost:8000/video_feed?t=${timestamp}" 
+                     alt="Live Camera Feed" 
+                     class="camera-stream" 
+                     style="display: none;"
+                     onload="this.style.display='block'; if(this.previousElementSibling) this.previousElementSibling.style.display='none'">
                 <div class="scanning-bar"></div>
             </div>
             <h3>Scanning Face... | अनुहार स्क्यान गर्दै...</h3>
             <p>Please keep your face steady.<br>कृपया आफ्नो अनुहार स्थिर राख्नुहोस्।</p>
         `;
+
+        // Small delay to allow backend to warm up BEFORE setting the img src
+        setTimeout(() => {
+            const img = faceRecognitionCard.querySelector('.camera-stream');
+            if (img && img.hasAttribute('data-src')) {
+                img.src = img.getAttribute('data-src');
+            }
+        }, 1000); // 1 second warm-up
     }
 
     if (faceStatus) {
@@ -197,13 +225,15 @@ function startFaceRecognition() {
 
     Promise.all([faceLoginPromise, minDelayPromise])
         .then(([data]) => {
-            // Function to clear camera stream from DOM to signal backend to release resource
+            // Function to clear camera stream and signal backend
             const stopCameraStream = () => {
                 const streamImg = document.querySelector('.camera-stream');
                 if (streamImg) {
                     streamImg.src = '';
                     streamImg.remove();
                 }
+                // Explicitly tell backend to stop camera
+                fetch("http://localhost:8000/stop_camera").catch(() => { });
             };
 
             if (data.status === "allowed") {
