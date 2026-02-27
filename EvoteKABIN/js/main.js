@@ -547,10 +547,22 @@ function renderBallotParties() {
 function showCustomError(message) {
     const modal = document.getElementById('custom-error-modal');
     const msgElement = document.getElementById('custom-error-message');
+    const titleElement = document.getElementById('custom-error-title');
     const closeBtn = document.getElementById('custom-error-close');
+
+    const lang = localStorage.getItem('selectedLanguage') || 'en';
 
     if (modal && msgElement) {
         msgElement.textContent = message;
+
+        // Localize Modal UI
+        if (titleElement) {
+            titleElement.textContent = lang === 'np' ? 'त्रुटि' : 'Error';
+        }
+        if (closeBtn) {
+            closeBtn.textContent = lang === 'np' ? 'बन्द गर्नुहोस्' : 'Close';
+        }
+
         modal.style.display = 'flex';
 
         if (closeBtn) {
@@ -690,7 +702,7 @@ function handleRegistration(lang) {
         const inputName = voterData.fullName.trim().toLowerCase();
         const knownName = knownVoterData.fullName.trim().toLowerCase();
 
-        // 1. Validate Voter ID
+        // 1. Validate Voter ID Match with Face Recognition result
         if (inputId !== knownCode) {
             showCustomError(lang === 'np'
                 ? `तपाईंको मतदाता परिचयपत्र नम्बर मेल खाएन`
@@ -698,7 +710,7 @@ function handleRegistration(lang) {
             return;
         }
 
-        // 2. Validate Name (Relaxed check: Input must contain the recognized name)
+        // 2. Validate Name Match with Face Recognition result
         if (!inputName.includes(knownName)) {
             showCustomError(lang === 'np'
                 ? `तपाईंको मतदाता नाम मेल खाएन`
@@ -706,19 +718,55 @@ function handleRegistration(lang) {
             return;
         }
     }
-    // End of Security Check
 
-    // Check if user has already voted locally (optional double check)
-    // ...
+    // 3. BACKEND VERIFICATION (Verify DOB and ID against Database)
+    // Show a loading state or disable button? Let's just do the fetch.
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = lang === 'np' ? 'प्रमाणित गर्दै...' : 'Verifying...';
 
-    // Persist voter list for admin view
-    addVoter(voterData);
+    fetch("http://localhost:8000/verify_voter_details", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            voter_id: voterData.voterId,
+            full_name: voterData.fullName,
+            dob: voterData.dateOfBirth
+        }),
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.verified) {
+                // Persist voter list for admin view
+                addVoter(voterData);
 
-    // Save voter data to localStorage
-    localStorage.setItem('voterData', JSON.stringify(voterData));
+                // Save voter data to localStorage
+                localStorage.setItem('voterData', JSON.stringify(voterData));
 
-    // Redirect to ballot page
-    window.location.href = 'ballot.html';
+                // Redirect to ballot page
+                window.location.href = 'ballot.html';
+            } else {
+                // Reset button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+
+                // Show error from backend
+                showCustomError(lang === 'np'
+                    ? `प्रमाणीकरण विफल: गलत जन्म मिति।`
+                    : `Verification Failed: Incorrect Date of Birth.`);
+            }
+        })
+        .catch(err => {
+            console.error("Verification error:", err);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+            showCustomError(lang === 'np'
+                ? 'सर्भरसँग जडान गर्न सकिएन'
+                : 'Could not connect to verification server');
+        });
 }
 
 // ============================================
@@ -744,23 +792,72 @@ function initializeBallotPage() {
     if (constituencyButtons && selectedConstituencyInput && ballotPaperSection && ballotConstNumber) {
         constituencyButtons.forEach(btn => {
             btn.addEventListener('click', () => {
-                const value = btn.getAttribute('data-constituency');
-                selectedConstituencyInput.value = value;
-                ballotConstNumber.textContent = value;
+                const selectedValue = btn.getAttribute('data-constituency');
 
-                // Visual selection
-                constituencyButtons.forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
+                // Get voter data from storage to get voterId
+                const voterData = JSON.parse(localStorage.getItem('voterData') || '{}');
+                const voterId = voterData.voterId;
 
-                // Reset party selection
-                const partyRadios = document.querySelectorAll('input[name="vote"]');
-                partyRadios.forEach(radio => radio.checked = false);
+                if (!voterId) {
+                    showCustomError('Voter information not found. Please register again.');
+                    return;
+                }
 
-                // Show ballot paper section
-                ballotPaperSection.style.display = 'block';
+                // Show loading state on the button
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = 'Verifying...';
 
-                // Scroll into view for better UX
-                ballotPaperSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Fetch correct constituency from backend
+                fetch(`http://localhost:8000/get_constituency?voter_id=${voterId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+
+                        const dbConstituency = String(data.constituency);
+
+                        if (dbConstituency !== selectedValue) {
+                            // INCORRECT SELECTION
+                            const currentLang = localStorage.getItem('selectedLanguage') || 'en';
+                            const errorMsg = currentLang === 'np'
+                                ? `प्रमाणीकरण विफल: गलत प्रतिनिधि सभा निर्वाचन क्षेत्र। तपाईको निर्वाचन क्षेत्र ${dbConstituency} हो।`
+                                : `Verification Failed: Incorrect Parliamentary Constituency. Yours is ${dbConstituency}.`;
+
+                            showCustomError(errorMsg);
+
+                            // Visual feedback
+                            btn.classList.add('error');
+                            setTimeout(() => btn.classList.remove('error'), 2000);
+
+                            // Hide ballot paper if it was somehow shown
+                            ballotPaperSection.style.display = 'none';
+                        } else {
+                            // CORRECT SELECTION
+                            selectedConstituencyInput.value = selectedValue;
+                            ballotConstNumber.textContent = selectedValue;
+
+                            // Visual selection
+                            constituencyButtons.forEach(b => b.classList.remove('selected'));
+                            btn.classList.add('selected');
+
+                            // Reset party selection
+                            const partyRadios = document.querySelectorAll('input[name="vote"]');
+                            partyRadios.forEach(radio => radio.checked = false);
+
+                            // Show ballot paper section
+                            ballotPaperSection.style.display = 'block';
+
+                            // Scroll into view for better UX
+                            ballotPaperSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Constituency verification error:", err);
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        showCustomError('Could not verify constituency. Please check your connection.');
+                    });
             });
         });
     }

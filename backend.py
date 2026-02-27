@@ -2,7 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from main import recognize_face_once, mark_as_voted, gen_frames, get_all_voters, get_age_group_summary, is_voter_blocked
+from main import (
+    recognize_face_once, mark_as_voted, gen_frames, 
+    get_all_voters, get_age_group_summary, is_voter_blocked,
+    verify_voter_details, get_voter_constituency
+)
 
 app = FastAPI()
 
@@ -59,6 +63,22 @@ def record_vote(data: VoteRecord):
     if success:
         return {"status": "success"}
     return {"status": "failed", "message": "Could not record vote or already voted"}
+
+# New endpoint for DOB and name verification
+class VoterVerification(BaseModel):
+    voter_id: str
+    full_name: str
+    dob: str
+
+@app.post("/verify_voter_details")
+def verify_voter_endpoint(data: VoterVerification):
+    result = verify_voter_details(data.voter_id, data.full_name, data.dob)
+    return result
+
+@app.get("/get_constituency")
+def get_constituency_endpoint(voter_id: str):
+    constituency = get_voter_constituency(voter_id)
+    return {"constituency": constituency}
 
 @app.get("/stop_camera")
 def stop_camera_endpoint():

@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-Vote - Ballot Paper | मतपत्र</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <div class="container">
         <div class="ballot-card">
@@ -18,38 +20,52 @@
                     Select your parliamentary constituency | आफ्नो प्रतिनिधि सभा निर्वाचन क्षेत्र छान्नुहोस्
                 </p>
             </div>
-            
+
             <form id="ballot-form" class="ballot-form">
                 <div class="ballot-instructions" id="instructions">
                     <h3>Instructions | निर्देशनहरू</h3>
                     <ul>
-                        <li id="inst1">Select only ONE candidate/party by clicking on the checkbox | केवल एउटा उम्मेदवार/दल छान्नुहोस्</li>
-                        <li id="inst2">Review your selection before submitting | पेश गर्नु अघि आफ्नो छनोट समीक्षा गर्नुहोस्</li>
-                        <li id="inst3">Once submitted, you cannot change your vote | पेश गरेपछि, तपाईंले आफ्नो मत परिवर्तन गर्न सक्नुहुन्न</li>
+                        <li id="inst1">Select only ONE candidate/party by clicking on the checkbox | केवल एउटा
+                            उम्मेदवार/दल छान्नुहोस्</li>
+                        <li id="inst2">Review your selection before submitting | पेश गर्नु अघि आफ्नो छनोट समीक्षा
+                            गर्नुहोस्</li>
+                        <li id="inst3">Once submitted, you cannot change your vote | पेश गरेपछि, तपाईंले आफ्नो मत
+                            परिवर्तन गर्न सक्नुहुन्न</li>
                     </ul>
                 </div>
-                
+
                 <!-- Step 1: Parliamentary Constituency Selection -->
                 <div class="constituency-section">
                     <h3>Parliamentary Constituency | प्रतिनिधि सभा निर्वाचन क्षेत्र</h3>
                     <p class="constituency-subtitle">
-                        Please select your parliamentary constituency | कृपया आफ्नो प्रतिनिधि सभा निर्वाचन क्षेत्र छान्नुहोस्
+                        Please select your parliamentary constituency | कृपया आफ्नो प्रतिनिधि सभा निर्वाचन क्षेत्र
+                        छान्नुहोस्
                     </p>
                     <div class="constituency-grid constituency-list">
-                        <button type="button" class="constituency-btn" data-constituency="1">Parliamentary Constituency 1 | प्रतिनिधि सभा निर्वाचन क्षेत्र १</button>
-                        <button type="button" class="constituency-btn" data-constituency="2">Parliamentary Constituency 2 | प्रतिनिधि सभा निर्वाचन क्षेत्र २</button>
-                        <button type="button" class="constituency-btn" data-constituency="3">Parliamentary Constituency 3 | प्रतिनिधि सभा निर्वाचन क्षेत्र ३</button>
-                        <button type="button" class="constituency-btn" data-constituency="4">Parliamentary Constituency 4 | प्रतिनिधि सभा निर्वाचन क्षेत्र ४</button>
-                        <button type="button" class="constituency-btn" data-constituency="5">Parliamentary Constituency 5 | प्रतिनिधि सभा निर्वाचन क्षेत्र ५</button>
-                        <button type="button" class="constituency-btn" data-constituency="6">Parliamentary Constituency 6 | प्रतिनिधि सभा निर्वाचन क्षेत्र ६</button>
-                        <button type="button" class="constituency-btn" data-constituency="7">Parliamentary Constituency 7 | प्रतिनिधि सभा निर्वाचन क्षेत्र ७</button>
-                        <button type="button" class="constituency-btn" data-constituency="8">Parliamentary Constituency 8 | प्रतिनिधि सभा निर्वाचन क्षेत्र ८</button>
-                        <button type="button" class="constituency-btn" data-constituency="9">Parliamentary Constituency 9 | प्रतिनिधि सभा निर्वाचन क्षेत्र ९</button>
-                        <button type="button" class="constituency-btn" data-constituency="10">Parliamentary Constituency 10 | प्रतिनिधि सभा निर्वाचन क्षेत्र १०</button>
+                        <button type="button" class="constituency-btn" data-constituency="1">Parliamentary Constituency
+                            1 | प्रतिनिधि सभा निर्वाचन क्षेत्र १</button>
+                        <button type="button" class="constituency-btn" data-constituency="2">Parliamentary Constituency
+                            2 | प्रतिनिधि सभा निर्वाचन क्षेत्र २</button>
+                        <button type="button" class="constituency-btn" data-constituency="3">Parliamentary Constituency
+                            3 | प्रतिनिधि सभा निर्वाचन क्षेत्र ३</button>
+                        <button type="button" class="constituency-btn" data-constituency="4">Parliamentary Constituency
+                            4 | प्रतिनिधि सभा निर्वाचन क्षेत्र ४</button>
+                        <button type="button" class="constituency-btn" data-constituency="5">Parliamentary Constituency
+                            5 | प्रतिनिधि सभा निर्वाचन क्षेत्र ५</button>
+                        <button type="button" class="constituency-btn" data-constituency="6">Parliamentary Constituency
+                            6 | प्रतिनिधि सभा निर्वाचन क्षेत्र ६</button>
+                        <button type="button" class="constituency-btn" data-constituency="7">Parliamentary Constituency
+                            7 | प्रतिनिधि सभा निर्वाचन क्षेत्र ७</button>
+                        <button type="button" class="constituency-btn" data-constituency="8">Parliamentary Constituency
+                            8 | प्रतिनिधि सभा निर्वाचन क्षेत्र ८</button>
+                        <button type="button" class="constituency-btn" data-constituency="9">Parliamentary Constituency
+                            9 | प्रतिनिधि सभा निर्वाचन क्षेत्र ९</button>
+                        <button type="button" class="constituency-btn" data-constituency="10">Parliamentary Constituency
+                            10 | प्रतिनिधि सभा निर्वाचन क्षेत्र १०</button>
                     </div>
                     <input type="hidden" id="selected-constituency" name="constituency">
                 </div>
-                
+
                 <!-- Step 2: Ballot Paper Style Options -->
                 <div class="ballot-paper-section" id="ballot-paper-section" style="display: none;">
                     <div class="ballot-paper-header">
@@ -62,14 +78,14 @@
                             Parliamentary Constituency <span id="ballot-constituency-number">1</span>
                         </div>
                     </div>
-                    
+
                     <div class="straight-line-section">
                         <p>
                             पार्टी नाम र उम्मेदवारको नाम कोठाभित्र टिक लगाउनुहोस् |
                             Mark your choice by ticking inside ONE box only.
                         </p>
                     </div>
-                    
+
                     <div class="icon-ballot-grid">
                         <!-- 12 symbols similar to official ballot layout -->
                         <div class="icon-ballot-cell">
@@ -78,7 +94,8 @@
                                 <span class="icon-emoji">☀️</span>
                                 <div class="icon-text">
                                     <div class="icon-title">Nepal Communist Party (Unified Marxist-Leninist)</div>
-                                    <div class="icon-sub">Candidate: Ram Bahadur Shrestha | उम्मेदवार: राम बहादुर श्रेष्ठ</div>
+                                    <div class="icon-sub">Candidate: Ram Bahadur Shrestha | उम्मेदवार: राम बहादुर
+                                        श्रेष्ठ</div>
                                 </div>
                                 <div class="icon-checkbox"></div>
                             </label>
@@ -100,7 +117,8 @@
                                 <span class="icon-emoji">🔔</span>
                                 <div class="icon-text">
                                     <div class="icon-title">Rastriya Prajatantra Party</div>
-                                    <div class="icon-sub">Candidate: Hari Prasad Koirala | उम्मेदवार: हरि प्रसाद कोइराला</div>
+                                    <div class="icon-sub">Candidate: Hari Prasad Koirala | उम्मेदवार: हरि प्रसाद कोइराला
+                                    </div>
                                 </div>
                                 <div class="icon-checkbox"></div>
                             </label>
@@ -111,7 +129,8 @@
                                 <span class="icon-emoji">📣</span>
                                 <div class="icon-text">
                                     <div class="icon-title">Janata Samajwadi Party</div>
-                                    <div class="icon-sub">Candidate: Gita Kumari Thapa | उम्मेदवार: गीता कुमारी थापा</div>
+                                    <div class="icon-sub">Candidate: Gita Kumari Thapa | उम्मेदवार: गीता कुमारी थापा
+                                    </div>
                                 </div>
                                 <div class="icon-checkbox"></div>
                             </label>
@@ -122,7 +141,8 @@
                                 <span class="icon-emoji">🪘</span>
                                 <div class="icon-text">
                                     <div class="icon-title">Loktantrik Samajwadi Party</div>
-                                    <div class="icon-sub">Candidate: Krishna Bahadur Mahara | उम्मेदवार: कृष्ण बहादुर महरा</div>
+                                    <div class="icon-sub">Candidate: Krishna Bahadur Mahara | उम्मेदवार: कृष्ण बहादुर
+                                        महरा</div>
                                 </div>
                                 <div class="icon-checkbox"></div>
                             </label>
@@ -133,7 +153,8 @@
                                 <span class="icon-emoji">🐓</span>
                                 <div class="icon-text">
                                     <div class="icon-title">Independent Candidate</div>
-                                    <div class="icon-sub">Candidate: Shyam Kumar Basnet | उम्मेदवार: श्याम कुमार बस्नेत</div>
+                                    <div class="icon-sub">Candidate: Shyam Kumar Basnet | उम्मेदवार: श्याम कुमार बस्नेत
+                                    </div>
                                 </div>
                                 <div class="icon-checkbox"></div>
                             </label>
@@ -166,7 +187,8 @@
                                 <span class="icon-emoji">🧺</span>
                                 <div class="icon-text">
                                     <div class="icon-title">Maoist Centre</div>
-                                    <div class="icon-sub">Candidate: Kul Prasad Bhattarai | उम्मेदवार: कुल प्रसाद भट्टराई</div>
+                                    <div class="icon-sub">Candidate: Kul Prasad Bhattarai | उम्मेदवार: कुल प्रसाद
+                                        भट्टराई</div>
                                 </div>
                                 <div class="icon-checkbox"></div>
                             </label>
@@ -206,7 +228,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="ballot-actions">
                     <button type="button" class="btn btn-secondary" onclick="window.location.href='register.html'">
                         ← Back | फिर्ता
@@ -218,7 +240,18 @@
             </form>
         </div>
     </div>
-    
+
+    <!-- Custom Error Modal -->
+    <div class="custom-modal" id="custom-error-modal" style="display: none;">
+        <div class="custom-modal-content">
+            <div class="modal-icon">⚠️</div>
+            <h3 id="custom-error-title">Error</h3>
+            <p id="custom-error-message">Something went wrong.</p>
+            <button class="btn btn-danger" id="custom-error-close">Close</button>
+        </div>
+    </div>
+
     <script src="js/main.js"></script>
 </body>
+
 </html>

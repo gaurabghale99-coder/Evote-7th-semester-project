@@ -225,6 +225,62 @@ def is_voter_blocked(voter_id):
         print(f"Error checking blocked status: {e}")
         return False
 
+# Newly added: Verify voter ID and DOB for registration
+def verify_voter_details(voter_id, full_name, dob):
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        # We fetch the record for the voter_id
+        cur.execute("SELECT full_name, date_of_birth FROM voters WHERE voter_id = %s", (voter_id,))
+        record = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if record is None:
+            return {"verified": False, "message": "Voter ID not found in database."}
+        
+        db_name, db_dob = record
+        
+        # Case insensitive name check (optional but helpful)
+        if db_name.strip().lower() != full_name.strip().lower():
+             return {"verified": False, "message": "Full Name does not match our records."}
+
+        # Date of Birth check
+        # db_dob might be a date object or a string depending on the schema
+        # Based on update_schema.py it's TIMESTAMP, but the screenshot showed 'character varying'
+        # Let's handle both.
+        db_dob_str = str(db_dob).strip()
+        input_dob_str = dob.strip()
+        
+        # Standardize format for comparison (YYYY/MM/DD vs YYYY-MM-DD)
+        db_dob_std = db_dob_str.replace('-', '/')
+        input_dob_std = input_dob_str.replace('-', '/')
+        
+        if db_dob_std != input_dob_std:
+            return {"verified": False, "message": "Incorrect Date of Birth."}
+            
+        return {"verified": True}
+        
+    except Exception as e:
+        print(f"Error verifying voter details: {e}")
+        return {"verified": False, "message": "An error occurred during verification."}
+
+# Newly added: Get voter's parliamentary constituency
+def get_voter_constituency(voter_id):
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute("SELECT parliamentary_constituency FROM voters WHERE voter_id = %s", (voter_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return row[0] if row else None
+    except Exception as e:
+        print(f"Error fetching constituency: {e}")
+        return None
+
 # Global manager instance
 manager = CameraManager()
 
