@@ -157,13 +157,46 @@ function initializeWelcomePage() {
     // Explicitly ensure camera is off when returning to welcome page
     fetch("http://localhost:8000/stop_camera").catch(() => { });
 
-    // Ensure initial state
-    if (faceStatus) faceStatus.style.display = 'none';
-    if (proceedBtn) proceedBtn.disabled = true;
+    // Check for persistent block
+    const blockUntil = localStorage.getItem('voterBlockUntil');
+    const now = Date.now();
+
+    if (blockUntil && now < parseInt(blockUntil)) {
+        // Still blocked!
+        if (faceCard) {
+            faceCard.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            faceCard.innerHTML = `
+                <div class="face-icon">🚫</div>
+                <h3 style="color: white;">Access Blocked | पहुँच रोकियो</h3>
+            `;
+        }
+        if (proceedBtn) {
+            proceedBtn.disabled = false;
+            proceedBtn.setAttribute('data-blocked', 'true');
+            proceedBtn.setAttribute('data-message', localStorage.getItem('voterBlockMessage') || 'You are blocked for 1 minute.');
+        }
+        if (faceStatus) faceStatus.style.display = 'none';
+    } else {
+        // Not blocked or block expired
+        localStorage.removeItem('voterBlockUntil');
+        localStorage.removeItem('voterBlockMessage');
+
+        if (faceStatus) faceStatus.style.display = 'none';
+        if (proceedBtn) {
+            proceedBtn.disabled = true;
+            proceedBtn.removeAttribute('data-blocked');
+        }
+    }
 
     // Proceed button handler
     if (proceedBtn) {
         proceedBtn.addEventListener('click', function () {
+            const isBlocked = proceedBtn.getAttribute('data-blocked') === 'true';
+            if (isBlocked) {
+                const msg = proceedBtn.getAttribute('data-message') || 'You have been blocked for 1 minute.';
+                alert(msg);
+                return;
+            }
             if (!proceedBtn.disabled) {
                 window.location.href = 'language.html';
             }
@@ -256,7 +289,34 @@ function startFaceRecognition() {
                     currentVoter.fullName = data.name;
                     localStorage.setItem('voterData', JSON.stringify(currentVoter));
                 }
-                if (proceedBtn) proceedBtn.disabled = false;
+                if (proceedBtn) {
+                    proceedBtn.disabled = false;
+                    proceedBtn.removeAttribute('data-blocked');
+                }
+            } else if (data.status === "blocked") {
+                stopCameraStream();
+                if (faceRecognitionCard) {
+                    faceRecognitionCard.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    faceRecognitionCard.innerHTML = `
+                        <div class="face-icon">🚫</div>
+                        <h3 style="color: white;">Access Blocked | पहुँच रोकियो</h3>
+                    `;
+                }
+                // Hide redundant status box
+                if (faceStatus) {
+                    faceStatus.style.display = 'none';
+                }
+
+                // Persist the block for 1 minute in case of refresh
+                localStorage.setItem('voterBlockUntil', Date.now() + 60000);
+                localStorage.setItem('voterBlockMessage', data.message);
+
+                // Enable proceed button but with a block flag so click shows the alert as requested
+                if (proceedBtn) {
+                    proceedBtn.disabled = false;
+                    proceedBtn.setAttribute('data-blocked', 'true');
+                    proceedBtn.setAttribute('data-message', data.message);
+                }
             } else if (data.status === "already_voted") {
                 stopCameraStream(); // Clear camera
                 if (faceRecognitionCard) {

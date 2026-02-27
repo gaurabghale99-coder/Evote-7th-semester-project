@@ -35,7 +35,6 @@ try:
     cur = conn.cursor()
 
     # Create voters table
-    # face_encoding is stored as list in python, so likely FLOAT array in Postgres
     cur.execute("""
         CREATE TABLE IF NOT EXISTS voters (
             id SERIAL PRIMARY KEY,
@@ -47,8 +46,19 @@ try:
             parliamentary_constituency VARCHAR(100)
         )
     """)
+    
+    # Create behavior_logs table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS behavior_logs (
+            id SERIAL PRIMARY KEY,
+            voter_id VARCHAR(50),
+            timestamp FLOAT8,
+            confidence FLOAT8,
+            multiple_faces BOOLEAN
+        )
+    """)
     conn.commit()
-    print("Table 'voters' checked/created successfully.")
+    print("Table 'voters' and 'behavior_logs' checked/created successfully.")
     
     cur.close()
     conn.close()

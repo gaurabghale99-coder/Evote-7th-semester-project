@@ -13,6 +13,7 @@ DB_CONFIG = {
 }
 
 TOLERANCE = 0.45  # smaller = stricter match
+FRAUD_THRESHOLD = 0.06 # Change this to 0.7 for production. Lower = easier to trigger fraud warning.
 
 import threading
 import time
@@ -137,7 +138,33 @@ class CameraManager:
                                     if dists[idx] <= TOLERANCE:
                                         res = self.voters[idx].copy()
                                         res["voted"] = get_voter_voted_status(res["code"])
+                                        
+                                        # --- RNN Fraud Detection ---
+                                        from behavior_tracker import BehaviorTracker
+                                        tracker = BehaviorTracker(DB_CONFIG)
+                                        # Confidence is 1.0 - dist
+                                        confidence = 1.0 - float(dists[idx])
+                                        fraud_score = tracker.log_attempt(res["code"], confidence, False)
+                                        res["fraud_score"] = fraud_score
+                                        res["is_suspicious"] = fraud_score > FRAUD_THRESHOLD
+                                        
+                                        # Print to terminal so user can verify it's working
+                                        print(f"--- Behavioral Analysis RNN ---")
+                                        print(f"Voter ID: {res['code']}")
+                                        print(f"Fraud Score: {fraud_score:.4f}")
+                                        print(f"Status: {'⚠️ SUSPICIOUS' if res['is_suspicious'] else '✅ NORMAL'}")
+                                        print(f"-------------------------------")
+                                        
                                         self.recognition_result = res
+                                        
+                                        # If suspicious, block for 1 minute
+                                        if res.get("is_suspicious"):
+                                            record_voter_block(res["code"], 1)
+                    elif len(face_locations) > 1:
+                         # Extra check for multiple faces under RNN
+                         from behavior_tracker import BehaviorTracker
+                         tracker = BehaviorTracker(DB_CONFIG)
+                         tracker.log_attempt("ANONYMOUS", 0.0, True) 
 
                 # 3. Draw green rectangles ALWAYS for feedback
                 for (top, right, bottom, left) in face_locations:
@@ -168,6 +195,34 @@ def get_voter_voted_status(voter_id):
         return row[0] if row else False
     except Exception as e:
         print(f"Error checking voted status: {e}")
+        return False
+
+# Record a block for a voter for N minutes
+def record_voter_block(voter_id, minutes=1):
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        # Calculate block time
+        cur.execute("UPDATE voters SET blocked_until = NOW() + INTERVAL '%s minutes' WHERE voter_id = %s", (minutes, voter_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        print(f"Voter {voter_id} blocked for {minutes} minute(s).")
+    except Exception as e:
+        print(f"Error recording voter block: {e}")
+
+# Check if voter is currently blocked
+def is_voter_blocked(voter_id):
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute("SELECT blocked_until > NOW() FROM voters WHERE voter_id = %s", (voter_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return row[0] if row and row[0] is not None else False
+    except Exception as e:
+        print(f"Error checking blocked status: {e}")
         return False
 
 # Global manager instance

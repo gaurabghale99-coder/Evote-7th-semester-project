@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from main import recognize_face_once, mark_as_voted, gen_frames, get_all_voters, get_age_group_summary
+from main import recognize_face_once, mark_as_voted, gen_frames, get_all_voters, get_age_group_summary, is_voter_blocked
 
 app = FastAPI()
 
@@ -34,11 +34,21 @@ def face_login():
     if res.get("multiple_faces") is True:
         return {"status": "multiple_faces"}
 
+    # Check if voter is blocked
+    voter_code = res.get("code")
+    if voter_code and is_voter_blocked(voter_code):
+        return {
+            "status": "blocked",
+            "message": "Fraud detected. Your voting is blocked for 1 minute."
+        }
+
     return {
         "status": "allowed",
         "name": res.get("name"),
         "voter_id": res.get("id"),
-        "voter_code": res.get("code")
+        "voter_code": voter_code,
+        "fraud_score": res.get("fraud_score", 0.0),
+        "is_suspicious": res.get("is_suspicious", False)
     }
 
 
