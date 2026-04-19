@@ -1,47 +1,96 @@
 import psycopg2
 import face_recognition
 import os
+import numpy as np
 
-conn = psycopg2.connect(
-    dbname="evote",
-    user="postgres",
-    password="gaurab4445",
-    host="localhost",
-    port="5432"
-)
-cur = conn.cursor()
+DB_CONFIG = {
+    "dbname": "evote",
+    "user": "postgres",
+    "password": "gaurab4445",
+    "host": "localhost",
+    "port": "5432"
+}
 
 FACES_DIR = "faces"
 
-# Get last voter_code number
-cur.execute("SELECT voter_id FROM voters ORDER BY voter_id DESC LIMIT 1")
-row = cur.fetchone()
-counter = int(row[0][1:]) + 1 if row and row[0] and row[0].startswith('V') else 1
+def register_faces():
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
 
-for file in sorted(os.listdir(FACES_DIR)):
-    if not file.lower().endswith(".jpg"):
-        continue
+        # Get last voter_id formatted Vxxx
+        cur.execute("SELECT voter_id FROM voters WHERE voter_id LIKE 'V%' ORDER BY voter_id DESC LIMIT 1")
+        row = cur.fetchone()
+        
+        # Determine starting counter
+        if row and row[0]:
+            try:
+                counter = int(row[0][1:]) + 1
+            except ValueError:
+                counter = 1
+        else:
+            counter = 1
 
-    name = os.path.splitext(file)[0].lower()
-    path = os.path.join(FACES_DIR, file)
+        files = sorted(os.listdir(FACES_DIR))
+        registered_count = 0
+        updated_count = 0
 
-    img = face_recognition.load_image_file(path)
-    encs = face_recognition.face_encodings(img)
+        for file in files:
+            if not file.lower().endswith((".jpg", ".jpeg", ".png")):
+                continue
 
-    if len(encs) != 1:
-        continue
+            # Full name is filename without extension (initially)
+            name_from_file = os.path.splitext(file)[0].lower()
+            path = os.path.join(FACES_DIR, file)
 
-    voter_id = f"V{counter:03d}"
-    counter += 1
+            print(f"Processing {file}...")
+            
+            try:
+                img = face_recognition.load_image_file(path)
+                encs = face_recognition.face_encodings(img)
+            except Exception as e:
+                print(f"  Error loading {file}: {e}")
+                continue
 
-    # Insert without ON CONFLICT, since names can repeat
-    cur.execute("""
-        INSERT INTO voters (voter_id, full_name, face_encoding, voted)
-        VALUES (%s, %s, %s, FALSE)
-    """, (voter_id, name, encs[0].tolist()))
+            if len(encs) != 1:
+                print(f"  Skipping {file}: Found {len(encs)} faces (expected 1).")
+                continue
 
-conn.commit()
-cur.close()
-conn.close()
+            encoding = encs[0].tolist()
 
-print("Face registration complete")
+            # Check if voter already exists by name (case insensitive)
+            # We check if full_name contains the name_from_file
+            cur.execute("SELECT voter_id, full_name FROM voters WHERE LOWER(full_name) LIKE %s OR LOWER(full_name) = %s", 
+                        (f"%{name_from_file}%", name_from_file))
+            existing = cur.fetchone()
+
+            if existing:
+                v_id, full_name = existing
+                print(f"  Updating existing voter: {full_name} ({v_id})")
+                cur.execute("""
+                    UPDATE voters SET face_encoding = %s WHERE voter_id = %s
+                """, (encoding, v_id))
+                updated_count += 1
+            else:
+                new_voter_id = f"V{counter:03d}"
+                print(f"  Registering NEW voter: {name_from_file} as {new_voter_id}")
+                cur.execute("""
+                    INSERT INTO voters (voter_id, full_name, face_encoding, voted)
+                    VALUES (%s, %s, %s, FALSE)
+                """, (new_voter_id, name_from_file, encoding))
+                counter += 1
+                registered_count += 1
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        print(f"\nFace registration summary:")
+        print(f"  New voters registered: {registered_count}")
+        print(f"  Existing voters updated: {updated_count}")
+        
+    except Exception as e:
+        print(f"Database error: {e}")
+
+if __name__ == "__main__":
+    register_faces()
+

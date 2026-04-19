@@ -340,6 +340,20 @@ def mark_as_voted(voter_id):
     conn.close()
     return True
 
+# Reset all voters status
+def reset_all_voters():
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute("UPDATE voters SET voted=FALSE")
+        conn.commit()
+        cur.close()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error resetting voters: {e}")
+        return False
+
 # Get all registered voters
 def get_all_voters():
     try:

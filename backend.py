@@ -64,6 +64,14 @@ def record_vote(data: VoteRecord):
         return {"status": "success"}
     return {"status": "failed", "message": "Could not record vote or already voted"}
 
+@app.get("/reset_all_votes")
+def reset_all_votes_endpoint():
+    from main import reset_all_voters
+    success = reset_all_voters()
+    if success:
+        return {"status": "success"}
+    return {"status": "error", "message": "Failed to reset votes in DB"}
+
 # New endpoint for DOB and name verification
 class VoterVerification(BaseModel):
     voter_id: str

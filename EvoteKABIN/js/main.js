@@ -87,7 +87,25 @@ function deletePartyById(id) {
 
 function getVotes() {
     try {
-        return JSON.parse(localStorage.getItem('votes') || '[]');
+        const rawVotes = JSON.parse(localStorage.getItem('votes') || '[]');
+        const activeParties = getParties();
+
+        const validVotes = rawVotes.filter(vote => {
+            const pStr = vote.selectedParty;
+            if (!pStr) return false;
+
+            const parts = pStr.split(' | ');
+            const pName = parts[0];
+
+            return activeParties.some(p => p.name === pName && (!parts[1] || p.candidate === parts[1]));
+        });
+
+        // Retroactively remove them from database if we filtered anything out
+        if (validVotes.length !== rawVotes.length) {
+            localStorage.setItem('votes', JSON.stringify(validVotes));
+        }
+
+        return validVotes;
     } catch (e) {
         return [];
     }
@@ -989,7 +1007,7 @@ function buildConstituencySummary() {
 }
 
 function getColorForIndex(idx) {
-    const palette = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6', '#f97316', '#eab308', '#a855f7', '#f43f5e'];
+    const palette = ['#f39c12', '#2ecc71', '#3498db', '#9b59b6', '#e74c3c', '#078e73ff', '#e67e22', '#f0d153ff', '#d19be7ff', '#34495e'];
     return palette[idx % palette.length];
 }
 
@@ -999,27 +1017,88 @@ function renderResultsSummary() {
     const summary = buildConstituencySummary();
     container.innerHTML = '';
 
+    const allParties = getParties();
+
     Object.keys(summary).forEach(key => {
         const data = summary[key];
         const card = document.createElement('div');
         card.className = 'result-card';
 
         const partiesSorted = Object.entries(data.parties || {}).sort((a, b) => b[1] - a[1]);
-        const topLine = partiesSorted.length
-            ? `${partiesSorted[0][0]} (${partiesSorted[0][1]} votes)`
-            : 'No votes yet';
 
-        card.innerHTML = `
+        let html = `
             <h5>Constituency ${key}</h5>
             <div class="result-row"><span>Total votes</span><strong>${data.total}</strong></div>
-            <div class="result-row"><span>Leading</span><strong>${topLine}</strong></div>
+            <hr style="margin: 10px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);" />
         `;
 
-        if (partiesSorted.length > 1) {
-            const rest = partiesSorted.slice(1, 3).map(([name, count]) => `<div class="result-row"><span>${name}</span><span>${count}</span></div>`).join('');
-            card.innerHTML += rest;
+        if (partiesSorted.length === 0) {
+            html += `<div class="result-row" style="justify-content: center;"><span>No votes yet</span></div>`;
+        } else {
+            let visibleHtml = '';
+            let hiddenHtml = '';
+
+            partiesSorted.forEach(([name, count], index) => {
+                const parts = name.split(' | ');
+                const pName = parts[0];
+                const cName = parts[1] || pName;
+
+                const partyObj = allParties.find(p => p.name === pName && (!parts[1] || p.candidate === parts[1]));
+                const emojiChar = (partyObj && partyObj.emoji) ? partyObj.emoji : '🗳️';
+
+                const percentage = data.total > 0 ? ((count / data.total) * 100).toFixed(2) : '0.00';
+
+                const rowHtml = `
+                    <div class="result-row" style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 12px; width: 75%;">
+                            <div style="background: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 1.5em; color: black; line-height: 1;">
+                                ${emojiChar}
+                            </div>
+                            <div style="display: flex; flex-direction: column; overflow: hidden; text-align: left;">
+                                <span style="font-weight: bold; font-size: 1.05em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f8fafc;">${cName}</span>
+                                <span style="font-size: 0.85em; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #94a3b8;">${pName}</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; width: 25%;">
+                            <span style="font-weight: bold; font-size: 1.2em; color: #4ade80;">${count}</span>
+                            <span style="font-size: 0.85em; opacity: 0.7; color: #94a3b8;">${percentage}%</span>
+                        </div>
+                    </div>
+                `;
+
+                if (index < 3) {
+                    visibleHtml += rowHtml;
+                } else {
+                    hiddenHtml += rowHtml;
+                }
+            });
+
+            html += visibleHtml;
+
+            if (hiddenHtml !== '') {
+                const hiddenContainerId = `hidden-parties-constituency-${key}`;
+                html += `
+                    <div id="${hiddenContainerId}" style="display: none;">
+                        ${hiddenHtml}
+                    </div>
+                    <div class="result-row" style="justify-content: center; margin-top: 12px;">
+                        <span style="color: #60a5fa; cursor: pointer; text-decoration: underline; font-size: 0.9em;" 
+                              onclick="
+                                  const el = document.getElementById('${hiddenContainerId}');
+                                  if (el.style.display === 'none') {
+                                      el.style.display = 'block';
+                                      this.innerText = 'See less';
+                                  } else {
+                                      el.style.display = 'none';
+                                      this.innerText = 'See more';
+                                  }
+                              ">See more</span>
+                    </div>
+                `;
+            }
         }
 
+        card.innerHTML = html;
         container.appendChild(card);
     });
 }
@@ -1028,107 +1107,174 @@ function renderResultsChart() {
     const chartContainer = document.getElementById('results-chart');
     if (!chartContainer) return;
 
-    // Get Data
-    const votes = getVotes();
-    const voters = getVoterList();
-    const totalVoters = voters.length || 0; // Avoid 0 division issues visually
-    const totalVotesCast = votes.length;
+    // Fetch live voter list from backend to ensure accurate count
+    fetch("http://localhost:8000/all_voters")
+        .then(res => res.json())
+        .then(voters => {
+            const votes = getVotes();
+            const allParties = getParties();
+            
+            const totalVoters = voters.length || 0;
+            const totalVotesCast = votes.length;
+            const nonVoters = Math.max(0, totalVoters - totalVotesCast);
 
-    // Group by constituency
-    const constituencyCounts = {};
-    votes.forEach(vote => {
-        const c = vote.constituency || 'Unknown';
-        constituencyCounts[c] = (constituencyCounts[c] || 0) + 1;
-    });
+            // Group by party
+            const partyCounts = {};
 
-    // Clear Container
+            votes.forEach(vote => {
+                const parts = vote.selectedParty.split(' | ');
+                const pName = parts[0];
+                partyCounts[pName] = (partyCounts[pName] || 0) + 1;
+            });
+
+            // The rest of the rendering logic remains the same but inside the .then block
+            renderChartWithData(chartContainer, votes, allParties, totalVoters, totalVotesCast, nonVoters, partyCounts);
+        })
+        .catch(err => {
+            console.error("Failed to fetch live voters for chart:", err);
+            // Fallback or error message
+            chartContainer.innerHTML = '<p class="admin-error">Failed to load live voter data.</p>';
+        });
+}
+
+function renderChartWithData(chartContainer, votes, allParties, totalVoters, totalVotesCast, nonVoters, partyCounts) {
     chartContainer.innerHTML = '';
-    // reset basic style to allow new flex layout
-    chartContainer.className = 'storage-chart-3d';
+    chartContainer.className = 'pie-chart-container';
+    chartContainer.style.position = 'relative';
+    chartContainer.style.display = 'flex';
+    chartContainer.style.justifyContent = 'center';
+    chartContainer.style.alignItems = 'center';
+    chartContainer.style.padding = '20px 0';
+    chartContainer.style.minHeight = '350px';
 
-    // 1. Header Section
-    const headerHtml = `
-        <div class="chart-3d-header">
-            <h3>Total Votes</h3>
-            <p>${totalVotesCast} votes / ${totalVoters} total voters | ${Math.max(0, totalVoters - totalVotesCast)} non voters</p>
-        </div>
-    `;
+    if (totalVotesCast === 0) {
+        const emptyHeaderHtml = `
+            <div style="width: 100%; text-align: left; margin-bottom: 25px;">
+                <h3 style="margin: 0 0 8px 0; font-size: 1.4em; color: #f8fafc;">Total Votes</h3>
+                <p style="margin: 0; color: #94a3b8; font-size: 0.95em;">
+                    ${totalVoters} total voters | ${nonVoters} non voters | ${totalVotesCast} votes
+                </p>
+            </div>
+        `;
+        chartContainer.innerHTML = `
+            <div style="width: 100%; display: flex; flex-direction: column; align-items: center; position: relative;">
+                ${emptyHeaderHtml}
+                <div style="width: 250px; height: 125px; background: #1e293b; border-radius: 150px 150px 0 0; margin-top: 20px; border: 1px solid rgba(255,255,255,0.05);"></div>
+                <p style="color: #94a3b8; padding: 20px; font-weight: 500;">No votes casted yet.</p>
+            </div>
+        `;
+        return;
+    }
 
-    // 2. Cylinder Construction
-    // Sort constituencies to stack them consistently (e.g. 1 to 10)
-    // We reverse so Const 1 is at top or bottom? Ideally bottom up.
-    // CSS Stack: flex-direction: column-reverse puts first element at bottom.
+    const sortedParties = Object.keys(partyCounts).sort((a, b) => partyCounts[b] - partyCounts[a]);
 
-    let segmentsHtml = '';
-    const sortedKeys = Object.keys(constituencyCounts).sort((a, b) => Number(a) - Number(b));
+    let svg = `<svg viewBox="-1 -1 2 2" style="transform: rotate(-90deg); width: 280px; height: 280px; display: block; overflow: visible; filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));">`;
+    let cumulativePercent = 0;
 
-    // Determine scale: proportional to totalVoters (capacity)
-    // Avoid calculating percentages based on pure 0 voters if app is fresh
-    const capacity = Math.max(totalVoters, 1);
+    function getCoordinatesForPercent(percent) {
+        const x = Math.cos(2 * Math.PI * percent);
+        const y = Math.sin(2 * Math.PI * percent);
+        return [x, y];
+    }
 
-    sortedKeys.forEach((key, idx) => {
-        const count = constituencyCounts[key];
-        const percentage = (count / capacity) * 100;
-        const color = getColorForIndex(Number(key) - 1); // Use key 1-based index for color consistency
+    let legendHtml = '<div style="margin-top: 25px; display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px;">';
 
-        segmentsHtml += `
-            <div class="cylinder-segment" style="height: ${percentage}%; --seg-color: ${color};" title="Const ${key}: ${count} votes"></div>
+    sortedParties.forEach((pName, idx) => {
+        const count = partyCounts[pName];
+        const percent = count / totalVotesCast;
+        const color = getColorForIndex(idx);
+        const percentStr = (percent * 100).toFixed(2) + '%';
+
+        const displayPName = pName.replace(' (Unified Marxist-Leninist)', '').replace('(Unified Marxist-Leninist)', '').trim();
+
+        const tooltipText = `${displayPName}|${color}|${displayPName}: ${percentStr}`;
+
+        if (percent === 1) {
+            svg += `<circle r="1" cx="0" cy="0" fill="${color}" class="pie-slice" data-tooltip="${tooltipText}" cursor="pointer" />`;
+        } else {
+            const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+            cumulativePercent += percent;
+            const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+            const largeArcFlag = percent > 0.5 ? 1 : 0;
+            const pathData = [
+                `M ${startX} ${startY}`,
+                `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+                `L 0 0`
+            ].join(' ');
+
+            svg += `<path d="${pathData}" fill="${color}" class="pie-slice" data-tooltip="${tooltipText}" stroke="#0f172a" stroke-width="0.015" cursor="pointer" style="transition: opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" />`;
+        }
+
+        legendHtml += `
+            <div style="display: flex; align-items: center; gap: 10px; font-size: 0.95em;">
+                <span style="width: 14px; height: 14px; background: ${color}; border-radius: 3px; display: inline-block;"></span>
+                <span style="color: #f8fafc; font-weight: 500;">${displayPName}</span>
+                <strong style="color: #94a3b8; margin-left: auto;">${percentStr}</strong>
+            </div>
         `;
     });
 
-    // Non-voters filler
-    // This fills the remaining space automatically if we use flex/height correctly, 
-    // OR we can explicitly add a transparent segment.
-    // Let's use a "filler" segment for non-voters at the top.
-    const nonVoterCount = Math.max(0, totalVoters - totalVotesCast);
-    const nonVoterPercentage = (nonVoterCount / capacity) * 100;
+    svg += `</svg>`;
+    legendHtml += '</div>';
 
-    // We put non-voter segment at the TOP (end of list if column-reverse)
-    const nonVoterSegment = `<div class="cylinder-segment segment-empty" style="height: ${nonVoterPercentage}%;"></div>`;
-
-
-    // 3. Legend Construction
-    let legendItemsHtml = '';
-    for (let i = 1; i <= 10; i++) {
-        const key = String(i);
-        const count = constituencyCounts[key] || 0;
-        const color = getColorForIndex(Number(key) - 1);
-        legendItemsHtml += `
-            <div class="legend-item">
-                <span class="legend-dot" style="background-color: ${color}"></span>
-                <div class="legend-info">
-                    <span class="legend-label">Parliamentary constituency ${key}</span>
-                    <span class="legend-value">${count} votes</span>
-                </div>
-            </div>
-       `;
-    }
-
-    // Assemble Full HTML
-    chartContainer.innerHTML = `
-        ${headerHtml}
-        <div class="cylinder-chart-body">
-            <div class="cylinder-wrapper">
-                <div class="cylinder-container">
-                    <div class="cylinder-top-cap"></div>
-                    <div class="cylinder-segments-stack">
-                         ${nonVoterSegment} 
-                         ${segmentsHtml} 
-                         <!-- Note: flex-direction column means top element is top. 
-                              So Non-voter should be first in DOM for "top", or last if column-reverse.
-                              We will use standard Flex Column, so Non-Voter First = Top.
-                          -->
-                    </div>
-                    <div class="cylinder-bottom-cap"></div>
-                    <!-- Overlay glass effect -->
-                    <div class="cylinder-glass"></div>
-                </div>
-            </div>
-            <div class="chart-legend">
-                ${legendItemsHtml}
+    const tooltipHtml = `
+        <div id="pie-tooltip" style="position: absolute; display: none; background: #1e293b; color: white; padding: 14px; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); pointer-events: none; z-index: 1000; min-width: 220px; border: 1px solid rgba(255,255,255,0.1);">
+            <div id="pie-tt-title" style="font-weight: bold; font-size: 1.05em; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;"></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="pie-tt-color" style="width: 14px; height: 14px; border-radius: 2px; display: inline-block;"></span>
+                <span id="pie-tt-desc" style="font-size: 0.95em; color: #cbd5e1;"></span>
             </div>
         </div>
     `;
+
+    const headerHtml = `
+        <div style="width: 100%; text-align: left; margin-bottom: 25px;">
+            <h3 style="margin: 0 0 8px 0; font-size: 1.4em; color: #f8fafc;">Total Votes</h3>
+            <p style="margin: 0; color: #94a3b8; font-size: 0.95em;">
+                ${totalVoters} total voters | ${nonVoters} non voters | ${totalVotesCast} votes
+            </p>
+        </div>
+    `;
+
+    chartContainer.innerHTML = `
+        <div style="width: 100%; display: flex; flex-direction: column; align-items: center; position: relative;">
+            ${headerHtml}
+            ${svg}
+            ${tooltipHtml}
+            ${legendHtml}
+        </div>
+    `;
+
+    const slices = chartContainer.querySelectorAll('.pie-slice');
+    const tooltip = chartContainer.querySelector('#pie-tooltip');
+    const ttTitle = chartContainer.querySelector('#pie-tt-title');
+    const ttColor = chartContainer.querySelector('#pie-tt-color');
+    const ttDesc = chartContainer.querySelector('#pie-tt-desc');
+
+    const trackMouse = (e) => {
+        if (!tooltip) return;
+        const rect = chartContainer.getBoundingClientRect();
+        // Keep tooltip within bounds somewhat
+        let x = e.clientX - rect.left + 15;
+        let y = e.clientY - rect.top + 15;
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+    };
+
+    slices.forEach(slice => {
+        slice.addEventListener('mouseover', (e) => {
+            const data = slice.getAttribute('data-tooltip').split('|');
+            ttTitle.innerText = data[0];
+            ttColor.style.background = data[1];
+            ttDesc.innerText = data[2];
+            tooltip.style.display = 'block';
+            trackMouse(e);
+        });
+        slice.addEventListener('mousemove', trackMouse);
+        slice.addEventListener('mouseout', () => {
+            tooltip.style.display = 'none';
+        });
+    });
 }
 
 function renderAgeGroupTable() {
@@ -1354,6 +1500,34 @@ function initializeAdminPanel() {
                 deletePartyById(select.value);
                 populateDeleteSelect();
                 alert('Party deleted.');
+            }
+        });
+    }
+
+    const resetVotesBtn = document.getElementById('admin-reset-votes-button');
+    if (resetVotesBtn) {
+        resetVotesBtn.addEventListener('click', () => {
+            const confirmed = confirm('Warning: This action will delete all currently casted votes and reset the voting process to the beginning. Proceed?');
+            if (confirmed) {
+                // Wipe local storage votes array natively
+                localStorage.removeItem('votes');
+
+                // Fetch backend to reset DB voter status flags
+                fetch('http://localhost:8000/reset_all_votes')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            alert('Success! All casted votes have been cleared. You are now ready to re-vote from the start.');
+                            const refreshBtn = document.getElementById('admin-refresh-results');
+                            if (refreshBtn) refreshBtn.click();
+                        } else {
+                            alert('Local votes wiped, but the backend returned an error.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Reset backend connection error:', err);
+                        alert('Local votes wiped natively. Ensure the backend handles the wipe.');
+                    });
             }
         });
     }
