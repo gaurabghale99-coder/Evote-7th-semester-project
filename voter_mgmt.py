@@ -9,11 +9,11 @@ except ImportError:
     HAS_TABULATE = False
 
 DB_CONFIG = {
-    "dbname": "evote",
+    "host": "db.jbmtnxzfdhsrpyyhyybt.supabase.co",
+    "dbname": "postgres",
     "user": "postgres",
-    "password": "gaurab4445",
-    "host": "localhost",
-    "port": "5432"
+    "password": "gaurab@4445",
+    "port": 5432
 }
 
 def get_db_connection():

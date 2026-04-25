@@ -86,10 +86,10 @@ class BehaviorTracker:
 if __name__ == "__main__":
     # Test logic
     DB_CONFIG = {
-        "host": "localhost",
-        "dbname": "evote",
+        "host": "db.jbmtnxzfdhsrpyyhyybt.supabase.co",
+        "dbname": "postgres",
         "user": "postgres",
-        "password": "gaurab4445",
+        "password": "gaurab@4445",
         "port": 5432
     }
     tracker = BehaviorTracker(DB_CONFIG)

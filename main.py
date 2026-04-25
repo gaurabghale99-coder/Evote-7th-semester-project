@@ -5,10 +5,10 @@ import numpy as np
 import psycopg2
 
 DB_CONFIG = {
-    "host": "localhost",
-    "dbname": "evote",
+    "host": "db.jbmtnxzfdhsrpyyhyybt.supabase.co",
+    "dbname": "postgres",
     "user": "postgres",
-    "password": "gaurab4445",
+    "password": "gaurab@4445",
     "port": 5432
 }
 

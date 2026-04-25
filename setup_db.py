@@ -1,37 +1,15 @@
 import psycopg2
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
-# Connect to 'postgres' db to create 'evote' db
-conn = psycopg2.connect(
-    dbname="postgres",
-    user="postgres",
-    password="gaurab4445",
-    host="localhost",
-    port="5432"
-)
-conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-cur = conn.cursor()
+# Connect to Supabase Cloud Database
+conn_params = {
+    "host": "db.jbmtnxzfdhsrpyyhyybt.supabase.co",
+    "dbname": "postgres",
+    "user": "postgres",
+    "password": "gaurab@4445",
+    "port": 5432
+}
 
 try:
-    cur.execute("CREATE DATABASE evote")
-    print("Database 'evote' created successfully.")
-except psycopg2.errors.DuplicateDatabase:
-    print("Database 'evote' already exists.")
-except Exception as e:
-    print(f"Error creating database: {e}")
-
-cur.close()
-conn.close()
-
-# Now connect to 'evote' to create table
-try:
-    conn = psycopg2.connect(
-        dbname="evote",
-        user="postgres",
-        password="gaurab4445",
-        host="localhost",
-        port="5432"
-    )
+    conn = psycopg2.connect(**conn_params)
     cur = conn.cursor()
 
     # Create voters table
@@ -43,7 +21,8 @@ try:
             face_encoding FLOAT8[],
             voted BOOLEAN DEFAULT FALSE,
             date_of_birth DATE,
-            parliamentary_constituency VARCHAR(100)
+            parliamentary_constituency VARCHAR(100),
+            blocked_until TIMESTAMP
         )
     """)
     
@@ -58,9 +37,9 @@ try:
         )
     """)
     conn.commit()
-    print("Table 'voters' and 'behavior_logs' checked/created successfully.")
+    print("Cloud database tables 'voters' and 'behavior_logs' checked/created successfully.")
     
     cur.close()
     conn.close()
 except Exception as e:
-    print(f"Error creating table: {e}")
+    print(f"Error connecting to Cloud Database: {e}")
