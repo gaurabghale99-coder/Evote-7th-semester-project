@@ -40,6 +40,11 @@ def face_login():
 
     # Check if voter is blocked
     voter_code = res.get("code")
+
+    # Check if already voted
+    if res.get("voted"):
+        return {"status": "already_voted", "name": res.get("name")}
+
     if voter_code and is_voter_blocked(voter_code):
         return {
             "status": "blocked",

@@ -819,23 +819,26 @@ input::-webkit-search-results-decoration {
     height: 100px;
     border-radius: 50%;
     display: block;
-    stroke-width: 3;
+    stroke-width: 2;
     stroke: var(--success-color);
     stroke-miterlimit: 10;
-    box-shadow: inset 0px 0px 0px var(--success-color);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    box-shadow: inset 0px 0px 0px 2px var(--success-color);
     animation: fill 0.4s ease-in-out 0.4s forwards, scale 0.3s ease-in-out 0.9s both;
 }
 
 .checkmark-circle-bg {
     fill: none;
     stroke: var(--success-color);
-    stroke-width: 3;
+    stroke-width: 2;
 }
 
 .checkmark-check {
     transform-origin: 50% 50%;
     stroke-dasharray: 48;
     stroke-dashoffset: 48;
+    stroke-width: 2;
     animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
 }
 
@@ -859,7 +862,7 @@ input::-webkit-search-results-decoration {
 
 @keyframes fill {
     100% {
-        box-shadow: inset 0px 0px 0px 30px var(--success-color);
+        box-shadow: inset 0px 0px 0px 2px var(--success-color);
     }
 }
 

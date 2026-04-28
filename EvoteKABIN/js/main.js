@@ -772,9 +772,8 @@ function handleRegistration(lang) {
                 submitBtn.innerHTML = originalBtnText;
 
                 // Show error from backend
-                showCustomError(lang === 'np'
-                    ? `प्रमाणीकरण विफल: गलत जन्म मिति।`
-                    : `Verification Failed: Incorrect Date of Birth.`);
+                const errorMsg = data.message || (lang === 'np' ? 'प्रमाणीकरण विफल भयो।' : 'Verification Failed.');
+                showCustomError(errorMsg);
             }
         })
         .catch(err => {

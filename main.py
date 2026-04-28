@@ -232,7 +232,7 @@ def verify_voter_details(voter_id, full_name, dob):
         cur = conn.cursor()
         
         # We fetch the record for the voter_id
-        cur.execute("SELECT full_name, date_of_birth FROM voters WHERE voter_id = %s", (voter_id,))
+        cur.execute("SELECT full_name, date_of_birth, voted FROM voters WHERE voter_id = %s", (voter_id,))
         record = cur.fetchone()
         
         cur.close()
@@ -241,7 +241,10 @@ def verify_voter_details(voter_id, full_name, dob):
         if record is None:
             return {"verified": False, "message": "Voter ID not found in database."}
         
-        db_name, db_dob = record
+        db_name, db_dob, db_voted = record
+
+        if db_voted:
+             return {"verified": False, "message": "You have already voted."}
         
         # Case insensitive name check (optional but helpful)
         if db_name.strip().lower() != full_name.strip().lower():
