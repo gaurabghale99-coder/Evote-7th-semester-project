@@ -344,13 +344,9 @@ function startFaceRecognition() {
                         <button class="btn btn-secondary" onclick="window.location.reload()">Back | फिर्ता</button>
                     `;
                 }
+                // Hide redundant status box
                 if (faceStatus) {
-                    faceStatus.innerHTML = `
-                        <div class="status-icon">⚠️</div>
-                        <p>${data.name} has already voted! | ${data.name} ले पहिले नै मतदान गरिसके।</p>
-                    `;
-                    faceStatus.style.display = 'block';
-                    faceStatus.className = 'face-recognition-status warning';
+                    faceStatus.style.display = 'none';
                 }
             } else if (data.status === "multiple_faces") {
                 stopCameraStream(); // Clear camera
