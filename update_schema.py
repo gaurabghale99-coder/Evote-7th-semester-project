@@ -1,10 +1,10 @@
 import psycopg2
 
 DB_CONFIG = {
-    "host": "db.jbmtnxzfdhsrpyyhyybt.supabase.co",
-    "dbname": "postgres",
+    "host": "localhost",
+    "dbname": "evote",
     "user": "postgres",
-    "password": "gaurab@4445",
+    "password": "gaurab4445",
     "port": 5432
 }
 

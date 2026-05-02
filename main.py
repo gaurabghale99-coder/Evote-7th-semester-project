@@ -1,14 +1,27 @@
 # main.py
+
+import os
+import cv2
+import numpy as np
+# Import the anti-spoofing module you copied from the src folder
+from src.anti_spoof_predict import AntiSpoofPredict
+from src.generate_patches import CropImage
+from src.utility import parse_model_name
+
+# Initialize the model (device_id=0 uses CPU by default, change if you have a GPU)
+anti_spoof_model = AntiSpoofPredict(device_id=0)
+image_cropper = CropImage()
+
 import cv2
 import face_recognition
 import numpy as np
 import psycopg2
 
 DB_CONFIG = {
-    "host": "db.jbmtnxzfdhsrpyyhyybt.supabase.co",
-    "dbname": "postgres",
+    "host": "localhost",
+    "dbname": "evote",
     "user": "postgres",
-    "password": "gaurab@4445",
+    "password": "gaurab4445",
     "port": 5432
 }
 
@@ -130,8 +143,66 @@ class CameraManager:
                         # 2. No result has been set yet
                         # 3. Multiple faces have NOT been detected previously in this session
                         if not self.multiple_faces_detected:
-                            encs = face_recognition.face_encodings(rgb_small_converted, face_locations)
-                            if encs:
+                            # --- ANTI-SPOOFING LIVENESS CHECK ---
+                            # Get the face location coordinates (scaled back to original frame size)
+                            top, right, bottom, left = face_locations[0]
+                            top *= 4
+                            right *= 4
+                            bottom *= 4
+                            left *= 4
+                            
+                            # ACTUALLY expand the crop so the anti-spoof model sees the phone edges/background
+                            w = right - left
+                            h = bottom - top
+                            
+                            # Expand by 50% on each side
+                            expand_w = int(w * 0.5)
+                            expand_h = int(h * 0.5)
+                            
+                            new_left = max(0, left - expand_w)
+                            new_top = max(0, top - expand_h)
+                            new_right = min(frame.shape[1], right + expand_w)
+                            new_bottom = min(frame.shape[0], bottom + expand_h)
+                            
+                            image_bbox = [new_left, new_top, new_right - new_left, new_bottom - new_top]
+                            
+                            prediction = np.zeros((1, 3))
+                            is_real = False
+                            score = 0.0
+                            try:
+                                for model_name in os.listdir("anti_spoof_models"):
+                                    model_path = os.path.join("anti_spoof_models", model_name)
+                                    h_input, w_input, model_type, scale = parse_model_name(model_name)
+                                    param = {
+                                        "org_img": frame,
+                                        "bbox": image_bbox,
+                                        "scale": scale,
+                                        "out_w": w_input,
+                                        "out_h": h_input,
+                                        "crop": True,
+                                    }
+                                    if scale is None:
+                                        param["crop"] = False
+                                        
+                                    img = image_cropper.crop(**param)
+                                    prediction += anti_spoof_model.predict(img, model_path)
+                                    
+                                label = np.argmax(prediction)
+                                score = prediction[0][label] / 2.0  # Because there are 2 models
+                                is_real = (label == 1 and score > 0.95)
+                            except Exception as e:
+                                print(f"Spoof detection error: {e}")
+                                
+                            if not is_real:
+                                print(f"❌ SPOOF DETECTED! Score: {score:.2f}")
+                                cv2.putText(frame, "SPOOF DETECTED!", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                                # Do not run face recognition!
+                            else:
+                                print(f"✅ Liveness Check Passed: {score:.2f}")
+                                encs = face_recognition.face_encodings(rgb_small_converted, face_locations)
+                                
+                            # Continue only if encodings were found and it's a real face
+                            if 'encs' in locals() and encs:
                                 dists = face_recognition.face_distance(self.known_encodings, encs[0])
                                 if len(dists) > 0:
                                     idx = np.argmin(dists)

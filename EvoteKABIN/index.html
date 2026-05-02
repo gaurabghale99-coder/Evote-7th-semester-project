@@ -105,13 +105,20 @@
                         </form>
 
                         <div class="admin-delete-block">
-                            <label for="admin-delete-select">Delete a party</label>
-                            <div class="admin-delete-row">
-                                <select id="admin-delete-select"></select>
-                                <button class="btn btn-danger" id="admin-delete-button">Delete</button>
+                            <label for="admin-delete-select">Manage a party</label>
+                            <div class="admin-delete-row" style="position: relative; display: flex; gap: 10px; align-items: center;">
+                                <select id="admin-delete-select" style="flex: 1; max-width: 450px;"></select>
+                                <div class="dropdown" style="position: relative;">
+                                    <button class="btn btn-secondary" id="admin-edit-dropdown-btn">Edit ▾</button>
+                                    <div class="dropdown-content" id="admin-edit-dropdown-menu" style="display: none; position: absolute; top: 100%; right: 0; background: #2c3e50; border: 1px solid #34495e; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 10; min-width: 150px; overflow: hidden; margin-top: 5px;">
+                                        <button class="dropdown-item" id="admin-edit-name-btn" style="display: block; width: 100%; padding: 10px 16px; text-align: left; background: none; border: none; border-bottom: 1px solid #34495e; cursor: pointer; color: #ecf0f1; font-size: 0.9rem;">Change Party Name</button>
+                                        <button class="dropdown-item" id="admin-edit-candidate-btn" style="display: block; width: 100%; padding: 10px 16px; text-align: left; background: none; border: none; border-bottom: 1px solid #34495e; cursor: pointer; color: #ecf0f1; font-size: 0.9rem;">Change Candidate</button>
+                                        <button class="dropdown-item text-danger" id="admin-delete-btn" style="display: block; width: 100%; padding: 10px 16px; text-align: left; background: none; border: none; cursor: pointer; color: #e74c3c; font-size: 0.9rem;">Delete</button>
+                                    </div>
+                                </div>
                                 <button class="btn btn-primary" id="admin-reset-votes-button">Reset</button>
                             </div>
-                            <p class="admin-subtext">Deleting a party removes it from the ballot.</p>
+                            <p class="admin-subtext">Edit or delete a party from the ballot.</p>
                         </div>
                     </div>
                 </div>

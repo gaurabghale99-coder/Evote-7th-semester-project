@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-Vote - Vote Successful | मत सफल</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- Security: Prevent Caching -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
 </head>
 
 <body>
@@ -31,27 +35,9 @@
             <p class="success-message" id="success-message-np" style="display: none;">
                 लोकतान्त्रिक प्रक्रियामा सहभागिता जनाउनुभएकोमा धन्यवाद। तपाईंको मत सुरक्षित रूपमा रेकर्ड गरिएको छ।
             </p>
-            <div class="vote-details" id="vote-details">
-                <h3>Vote Details | मत विवरण</h3>
-                <div class="detail-item">
-                    <span class="detail-label">Voter ID:</span>
-                    <span class="detail-value" id="display-voter-id">-</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Voter Name:</span>
-                    <span class="detail-value" id="display-voter-name">-</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Selected Party:</span>
-                    <span class="detail-value" id="display-party">-</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Vote Time:</span>
-                    <span class="detail-value" id="display-time">-</span>
-                </div>
-            </div>
+            <!-- Vote Details Section Removed for Security and Privacy -->
             <div class="success-actions">
-                <button class="btn btn-primary" onclick="window.location.href='index.html'">
+                <button class="btn btn-primary" onclick="window.location.replace('index.html')">
                     Return to Home | घर फिर्ता
                 </button>
             </div>

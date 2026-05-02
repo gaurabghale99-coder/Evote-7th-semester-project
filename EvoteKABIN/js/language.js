@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Redirect to registration page after a short delay
             setTimeout(() => {
-                window.location.href = 'register.html';
+                window.location.replace('register.html');
             }, 300);
         });
     });

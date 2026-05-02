@@ -1,7 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+import time
+
 from main import (
     recognize_face_once, mark_as_voted, gen_frames, 
     get_all_voters, get_age_group_summary, is_voter_blocked,
@@ -17,6 +19,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security: Disable Browser Caching globally
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 # Record vote model
 class VoteRecord(BaseModel):
@@ -60,12 +71,17 @@ def face_login():
         "is_suspicious": res.get("is_suspicious", False)
     }
 
-
-
 @app.post("/record_vote")
 def record_vote(data: VoteRecord):
+    # Prevent double voting via API check
+    from main import get_voter_voted_status
+    if get_voter_voted_status(data.voter_id):
+         return {"status": "failed", "message": "You have already voted."}
+
     success = mark_as_voted(data.voter_id)
     if success:
+        # In a real ATM system, we'd clear the backend session here
+        # Since we are using stateless API + localStorage, the 'session' is cleared on the frontend.
         return {"status": "success"}
     return {"status": "failed", "message": "Could not record vote or already voted"}
 
@@ -90,6 +106,11 @@ def verify_voter_endpoint(data: VoterVerification):
 
 @app.get("/get_constituency")
 def get_constituency_endpoint(voter_id: str):
+    # Protection: Prevent access if already voted
+    from main import get_voter_voted_status
+    if get_voter_voted_status(voter_id):
+        return {"constituency": None, "error": "Already voted"}
+        
     constituency = get_voter_constituency(voter_id)
     return {"constituency": constituency}
 
@@ -107,7 +128,3 @@ def all_voters():
 @app.get("/age_group_summary")
 def age_group_summary():
     return get_age_group_summary()
-
-
-
-

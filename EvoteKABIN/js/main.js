@@ -3,7 +3,7 @@
 const ADMIN_PASSWORD = 'admin123';
 
 const DEFAULT_PARTIES = [
-    { id: 'party1', name: 'Nepal Communist Party (Unified Marxist-Leninist)', candidate: 'Ram Bahadur Shrestha', emoji: '☀️' },
+    { id: 'party1', name: 'Nepal Communist Party', candidate: 'Ram Bahadur Shrestha', emoji: '☀️' },
     { id: 'party2', name: 'Nepali Congress', candidate: 'Sita Devi Yadav', emoji: '🌳' },
     { id: 'party3', name: 'Rastriya Prajatantra Party', candidate: 'Hari Prasad Koirala', emoji: '🔔' },
     { id: 'party4', name: 'Janata Samajwadi Party', candidate: 'Gita Kumari Thapa', emoji: '📣' },
@@ -19,17 +19,42 @@ const DEFAULT_PARTIES = [
 
 document.addEventListener('DOMContentLoaded', function () {
     // 1. Force Redirect to Home on Refresh
-    // If we are NOT on index.html (or root), and the page was reloaded, go to index.html
-    const isIndex = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/');
+    const isIndex = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/') || window.location.pathname === '';
+    const isSuccess = window.location.pathname.endsWith('success.html');
+
+    // Protected pages that require being logged in and not having voted
+    const protectedPages = ['ballot.html', 'register.html', 'language.html'];
+    const currentPage = window.location.pathname.split('/').pop();
+    const voterData = JSON.parse(localStorage.getItem('voterData') || '{}');
+
+    // If on a protected page, check if we have voter session
+    if (protectedPages.includes(currentPage)) {
+        if (!voterData.voterId) {
+            window.location.replace('index.html');
+            return;
+        }
+    }
+
+    // ATM-like behavior is natively handled because we use location.replace() for all navigations.
+    // The history stack never grows, meaning the browser's back button is natively disabled.
+
+
+    // Force reload on bfcache restore (browser back/swipe gesture)
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            window.location.reload();
+        }
+    });
 
     // Check for reload navigation
     const entries = performance.getEntriesByType("navigation");
     const isReload = entries.length > 0 && entries[0].type === "reload";
 
-    if (!isIndex && isReload) {
-        window.location.href = 'index.html';
-        return; // Stop further initialization
+    if (!isIndex && !isSuccess && isReload) {
+        window.location.replace('index.html');
+        return;
     }
+
 
     try { initializeDataStores(); } catch (e) { console.error('DataStore Init Failed', e); }
     try { initializeAdminPanel(); } catch (e) { console.error('Admin Panel Init Failed', e); }
@@ -83,6 +108,24 @@ function addParty(party) {
 function deletePartyById(id) {
     const parties = getParties().filter(p => p.id !== id);
     saveParties(parties);
+}
+
+function editPartyById(id, newName) {
+    const parties = getParties();
+    const idx = parties.findIndex(p => p.id === id);
+    if (idx !== -1) {
+        parties[idx].name = newName;
+        saveParties(parties);
+    }
+}
+
+function editCandidateById(id, newCandidate) {
+    const parties = getParties();
+    const idx = parties.findIndex(p => p.id === id);
+    if (idx !== -1) {
+        parties[idx].candidate = newCandidate;
+        saveParties(parties);
+    }
 }
 
 function getVotes() {
@@ -216,7 +259,7 @@ function initializeWelcomePage() {
                 return;
             }
             if (!proceedBtn.disabled) {
-                window.location.href = 'language.html';
+                window.location.replace('language.html');
             }
         });
     }
@@ -760,8 +803,8 @@ function handleRegistration(lang) {
                 // Save voter data to localStorage
                 localStorage.setItem('voterData', JSON.stringify(voterData));
 
-                // Redirect to ballot page
-                window.location.href = 'ballot.html';
+                // Redirect to ballot page using replace to avoid adding register.html to history
+                window.location.replace('ballot.html');
             } else {
                 // Reset button
                 submitBtn.disabled = false;
@@ -931,18 +974,23 @@ function handleVoteSubmission() {
             },
             body: JSON.stringify({ voter_id: voterData.voterId })
         })
-            .then(response => response.json())
             .then(res => {
                 console.log("Vote recorded in backend:", res);
-                // Redirect to success page regardless of backend result (UI priority)
-                window.location.href = 'success.html';
+
+                // CRITICAL: Clear session data بالكامل after successful vote
+                localStorage.removeItem('voterData');
+                localStorage.removeItem('faceRecognitionDone');
+
+                // Redirect to success page (use replace to avoid history stack)
+                window.location.replace('success.html');
             })
             .catch(err => {
                 console.error("Failed to record vote in backend:", err);
-                // Still redirect to success page so user feels it worked? 
-                // Or show error? For now, proceed.
-                window.location.href = 'success.html';
+                // Even on error, we should probably clear session if we think they voted
+                localStorage.removeItem('voterData');
+                window.location.replace('success.html');
             });
+
     }
 }
 
@@ -954,13 +1002,16 @@ function initializeSuccessPage() {
     const voteData = JSON.parse(localStorage.getItem('voteData') || '{}');
     const savedLang = localStorage.getItem('selectedLanguage') || 'en';
 
-    // Display vote details
+    // Process vote data (Limited for security - no UI display)
     if (voteData.voterId) {
-        document.getElementById('display-voter-id').textContent = voteData.voterId;
-        document.getElementById('display-voter-name').textContent = voteData.voterName;
-        document.getElementById('display-party').textContent = voteData.selectedParty;
-        document.getElementById('display-time').textContent = voteData.voteTime;
+
+        // CRITICAL: Wipe vote data from storage after display so it can't be retrieved by 'back' or inspection
+        localStorage.removeItem('voteData');
+    } else if (window.location.pathname.endsWith('success.html')) {
+        // If no data (e.g. they refreshed or swiped back), redirect to face verification
+        window.location.replace('index.html');
     }
+
 
     // Switch language based on preference
     if (savedLang === 'np') {
@@ -976,6 +1027,13 @@ function initializeSuccessPage() {
             const el = document.getElementById(id);
             if (el) el.style.display = 'block';
         });
+    }
+
+    // Auto-redirect to face verification (home) page in a quick second (1.5s)
+    if (window.location.pathname.endsWith('success.html')) {
+        setTimeout(() => {
+            window.location.replace('index.html');
+        }, 1500);
     }
 }
 
@@ -1108,7 +1166,7 @@ function renderResultsChart() {
         .then(voters => {
             const votes = getVotes();
             const allParties = getParties();
-            
+
             const totalVoters = voters.length || 0;
             const totalVotesCast = votes.length;
             const nonVoters = Math.max(0, totalVoters - totalVotesCast);
@@ -1485,7 +1543,66 @@ function initializeAdminPanel() {
         });
     }
 
-    const deleteBtn = document.getElementById('admin-delete-button');
+    // Dropdown toggle
+    const editDropdownBtn = document.getElementById('admin-edit-dropdown-btn');
+    const editDropdownMenu = document.getElementById('admin-edit-dropdown-menu');
+    if (editDropdownBtn && editDropdownMenu) {
+        editDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            editDropdownMenu.style.display = editDropdownMenu.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', () => {
+            editDropdownMenu.style.display = 'none';
+        });
+    }
+
+    // Edit Name logic
+    const editNameBtn = document.getElementById('admin-edit-name-btn');
+    if (editNameBtn) {
+        editNameBtn.addEventListener('click', () => {
+            const select = document.getElementById('admin-delete-select');
+            if (!select || !select.value) return;
+
+            const currentOption = select.options[select.selectedIndex].textContent;
+            const currentName = currentOption.split(' (')[0];
+
+            const newName = prompt('Enter new party name:', currentName);
+            if (newName && newName.trim() !== '' && newName.trim() !== currentName) {
+                editPartyById(select.value, newName.trim());
+                populateDeleteSelect();
+                alert('Party name updated.');
+            }
+        });
+    }
+
+    // Edit Candidate logic
+    const editCandidateBtn = document.getElementById('admin-edit-candidate-btn');
+    if (editCandidateBtn) {
+        editCandidateBtn.addEventListener('click', () => {
+            const select = document.getElementById('admin-delete-select');
+            if (!select || !select.value) return;
+
+            const currentOption = select.options[select.selectedIndex].textContent;
+            // Extract the current candidate (part inside the parentheses)
+            let currentCandidate = '';
+            if (currentOption.includes(' (')) {
+                currentCandidate = currentOption.split(' (')[1].replace(')', '');
+            }
+            if (currentCandidate === 'N/A') currentCandidate = '';
+
+            const newCandidate = prompt('Enter new candidate name:', currentCandidate);
+            if (newCandidate !== null && newCandidate.trim() !== currentCandidate) {
+                editCandidateById(select.value, newCandidate.trim());
+                populateDeleteSelect();
+                alert('Candidate updated.');
+            }
+        });
+    }
+
+    // Delete logic
+    const deleteBtn = document.getElementById('admin-delete-btn');
     if (deleteBtn) {
         deleteBtn.addEventListener('click', () => {
             const select = document.getElementById('admin-delete-select');
