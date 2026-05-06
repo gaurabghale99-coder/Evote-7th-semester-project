@@ -1386,12 +1386,26 @@ function renderVoterTable() {
             tableBody.innerHTML = '';
             voters.forEach((voter, idx) => {
                 const row = document.createElement('tr');
+                
+                // Color coding for fraud score
+                let scoreColor = '#10b981'; // green
+                let statusText = 'Normal ✅';
+                if (voter.last_fraud_score > 0.05) { scoreColor = '#f59e0b'; statusText = 'Warning ⚠️'; }
+                if (voter.last_fraud_score > 0.1) { scoreColor = '#ef4444'; statusText = 'Suspicious 🚨'; }
+                
+                const blockedTime = voter.is_blocked ? 
+                    `<span style="color: #ef4444; font-weight: bold;">${voter.blocked_until.split('.')[0]}</span>` : 
+                    '<span style="color: #94a3b8;">-</span>';
+
                 row.innerHTML = `
                     <td>${idx + 1}</td>
                     <td>${voter.voter_id || '-'}</td>
                     <td>${voter.full_name || '-'}</td>
                     <td>${voter.date_of_birth || '-'}</td>
                     <td>${voter.parliamentary_constituency || '-'}</td>
+                    <td style="color: ${scoreColor}; font-weight: bold;">${voter.last_fraud_score}</td>
+                    <td>${statusText}</td>
+                    <td>${blockedTime}</td>
                 `;
                 tableBody.appendChild(row);
             });

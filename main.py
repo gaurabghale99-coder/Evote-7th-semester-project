@@ -7,8 +7,12 @@ import numpy as np
 from src.anti_spoof_predict import AntiSpoofPredict
 from src.generate_patches import CropImage
 from src.utility import parse_model_name
+import torch
+import torch.nn as nn
+from torchvision import models, transforms
+from PIL import Image
 
-# Initialize the model (device_id=0 uses CPU by default, change if you have a GPU)
+# Initialize the anti-spoofing model
 anti_spoof_model = AntiSpoofPredict(device_id=0)
 image_cropper = CropImage()
 
@@ -42,7 +46,36 @@ class CameraManager:
         self.active_users = 0 # Count of how many things currently need the camera
         self.lock = threading.Lock()
         
-        # Load known encodings once
+        # --- CUSTOM MODEL SETUP ---
+        # Load class names
+        with open("face_model_classes.txt", "r") as f:
+            self.class_names = [line.strip() for line in f.readlines()]
+            
+        # Rebuild the custom ResNet-18 architecture
+        self.custom_model = models.resnet18(pretrained=False)
+        self.custom_model.fc = nn.Sequential(
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, len(self.class_names))
+        )
+        
+        # Load weights
+        checkpoint = torch.load("my_face_model.pth", map_location="cpu")
+        self.custom_model.load_state_dict(checkpoint['model_state_dict'])
+        self.custom_model.eval()
+        
+        # Image transformation for the custom model
+        self.transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+        # --------------------------
+
+        # Load known encodings (kept for database reference, but recognition uses classifier)
         self.known_encodings = []
         self.voters = []
         self.load_voters()
@@ -169,6 +202,7 @@ class CameraManager:
                             prediction = np.zeros((1, 3))
                             is_real = False
                             score = 0.0
+                            encs = None  # IMPORTANT: Reset encodings every frame!
                             try:
                                 for model_name in os.listdir("anti_spoof_models"):
                                     model_path = os.path.join("anti_spoof_models", model_name)
@@ -195,31 +229,49 @@ class CameraManager:
                                 
                             if not is_real:
                                 print(f"❌ SPOOF DETECTED! Score: {score:.2f}")
-                                cv2.putText(frame, "SPOOF DETECTED!", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
-                                # Do not run face recognition!
-                            else:
-                                print(f"✅ Liveness Check Passed: {score:.2f}")
-                                encs = face_recognition.face_encodings(rgb_small_converted, face_locations)
+                                cv2.putText(frame, "SPOOF DETECTED!", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 0, 255), 3)
+                                # Do not run face recognition! encs stays None
+                            if is_real:
+                                # 1. Prepare face crop for custom model
+                                face_crop = frame[new_top:new_bottom, new_left:new_right]
+                                face_rgb = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
+                                pil_img = Image.fromarray(face_rgb)
+                                tensor = self.transform(pil_img).unsqueeze(0)
                                 
-                            # Continue only if encodings were found and it's a real face
-                            if 'encs' in locals() and encs:
-                                dists = face_recognition.face_distance(self.known_encodings, encs[0])
-                                if len(dists) > 0:
-                                    idx = np.argmin(dists)
-                                    if dists[idx] <= TOLERANCE:
-                                        res = self.voters[idx].copy()
+                                # 2. Run prediction using your SELF-TRAINED model
+                                with torch.no_grad():
+                                    outputs = self.custom_model(tensor)
+                                    probabilities = torch.nn.functional.softmax(outputs, dim=1)
+                                    confidence, predicted = torch.max(probabilities, 1)
+                                    
+                                    recognized_name = self.class_names[predicted.item()]
+                                    conf_score = confidence.item() * 100
+                                    
+                                print(f"🤖 Custom AI Result: {recognized_name} ({conf_score:.1f}%)")
+                                
+                                # 3. Match recognized name to database voter record
+                                # Threshold (match your test script's 85%)
+                                if conf_score > 85:
+                                    # Take ONLY the first part of the folder name (e.g., 'V001' from 'V001_Gaurab')
+                                    # This ensures it matches the IDs in your Postgres Database
+                                    target_id = recognized_name.split('_')[0].strip().lower()
+                                    matched_voter = next((v for v in self.voters if v['code'].strip().lower() == target_id), None)
+                                    
+                                    if matched_voter:
+                                        res = matched_voter.copy()
                                         res["voted"] = get_voter_voted_status(res["code"])
                                         
-                                        # --- RNN Fraud Detection ---
+                                        # --- RNN Behavior Analysis ---
                                         from behavior_tracker import BehaviorTracker
                                         tracker = BehaviorTracker(DB_CONFIG)
-                                        # Confidence is 1.0 - dist
-                                        confidence = 1.0 - float(dists[idx])
-                                        fraud_score = tracker.log_attempt(res["code"], confidence, False)
+                                        # Use AI confidence for RNN score
+                                        fraud_score = tracker.log_attempt(res["code"], confidence.item(), False)
                                         res["fraud_score"] = fraud_score
                                         res["is_suspicious"] = fraud_score > FRAUD_THRESHOLD
                                         
-                                        # Print to terminal so user can verify it's working
+                                        # Save last fraud score to database
+                                        save_last_fraud_score(res["code"], fraud_score)
+                                        
                                         print(f"--- Behavioral Analysis RNN ---")
                                         print(f"Voter ID: {res['code']}")
                                         print(f"Fraud Score: {fraud_score:.4f}")
@@ -228,9 +280,12 @@ class CameraManager:
                                         
                                         self.recognition_result = res
                                         
-                                        # If suspicious, block for 1 minute
                                         if res.get("is_suspicious"):
-                                            record_voter_block(res["code"], 1)
+                                            record_voter_block(res["code"], 1, fraud_score)
+                                    else:
+                                        print(f"⚠️ Recognized as {recognized_name} but ID not in Voter DB.")
+                                else:
+                                    print(f"❓ UNKNOWN STRANGER (Conf: {conf_score:.1f}%)")
                     elif len(face_locations) > 1:
                          # Extra check for multiple faces under RNN
                          from behavior_tracker import BehaviorTracker
@@ -269,18 +324,35 @@ def get_voter_voted_status(voter_id):
         return False
 
 # Record a block for a voter for N minutes
-def record_voter_block(voter_id, minutes=1):
+def record_voter_block(voter_id, minutes=1, fraud_score=0.0):
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
-        # Calculate block time
-        cur.execute("UPDATE voters SET blocked_until = NOW() + INTERVAL '%s minutes' WHERE voter_id = %s", (minutes, voter_id))
+        # Calculate block time and save fraud score
+        cur.execute("""
+            UPDATE voters 
+            SET blocked_until = NOW() + INTERVAL '%s minutes',
+                last_fraud_score = %s
+            WHERE voter_id = %s
+        """, (minutes, fraud_score, voter_id))
         conn.commit()
         cur.close()
         conn.close()
-        print(f"Voter {voter_id} blocked for {minutes} minute(s).")
+        print(f"Voter {voter_id} blocked for {minutes} minute(s). Score: {fraud_score}")
     except Exception as e:
         print(f"Error recording voter block: {e}")
+
+# Helper to save last fraud score without blocking
+def save_last_fraud_score(voter_id, fraud_score):
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute("UPDATE voters SET last_fraud_score = %s WHERE voter_id = %s", (fraud_score, voter_id))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"Error saving fraud score: {e}")
 
 # Check if voter is currently blocked
 def is_voter_blocked(voter_id):
@@ -433,7 +505,12 @@ def get_all_voters():
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
-        cur.execute("SELECT voter_id, full_name, date_of_birth, parliamentary_constituency FROM voters ORDER BY id ASC")
+        cur.execute("""
+            SELECT voter_id, full_name, date_of_birth, parliamentary_constituency, 
+                   last_fraud_score, blocked_until, blocked_until > NOW() as is_blocked
+            FROM voters 
+            ORDER BY id ASC
+        """)
         rows = cur.fetchall()
         
         voters = []
@@ -442,7 +519,10 @@ def get_all_voters():
                 "voter_id": row[0],
                 "full_name": row[1],
                 "date_of_birth": str(row[2]),
-                "parliamentary_constituency": row[3]
+                "parliamentary_constituency": row[3],
+                "last_fraud_score": round(float(row[4] or 0.0), 4),
+                "blocked_until": str(row[5]) if row[5] else None,
+                "is_blocked": bool(row[6])
             })
         cur.close()
         conn.close()
