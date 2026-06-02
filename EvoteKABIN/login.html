@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Login – E‑Vote</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Slight adjustments for the login card */
+        .login-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            max-width: 500px;
+            margin: 80px auto;
+            animation: fadeIn 0.5s ease-in;
+        }
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--primary-color);
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .login-card .form-group {
+            margin-bottom: 25px;
+        }
+        .login-card label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .login-card input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        }
+        .login-card .btn-primary {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            border-radius: 8px;
+            margin-top: 5px;
+        }
+        .login-card .forgot-link {
+            display: block;
+            margin-top: 15px;
+            text-align: right;
+            font-size: 0.9rem;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .login-card .forgot-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+        .login-card .back-link {
+            display: inline-block;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .login-card .back-link:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h2 id="card-title">User Login</h2>
+        
+        <!-- Login Form -->
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" required />
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="••••••••" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Log In</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                <a href="index.html" class="back-link">← Back to Home</a>
+                <a href="#" class="forgot-link" id="forgot-link" style="margin-top: 15px;">Forgot password?</a>
+            </div>
+        </form>
+
+        <!-- Forgot Password Form -->
+        <form id="forgot-form" style="display: none;">
+            <div class="form-group">
+                <label for="forgot-email">Email Address</label>
+                <input type="email" id="forgot-email" placeholder="you@example.com" required />
+            </div>
+            <div class="form-group">
+                <label for="forgot-dob">Date of Birth (BS)</label>
+                <input type="text" id="forgot-dob" placeholder="YYYY/MM/DD (BS Format - e.g., 2080/01/15)" required />
+            </div>
+            <div class="form-group">
+                <label for="forgot-new-password">New Password</label>
+                <input type="password" id="forgot-new-password" placeholder="••••••••" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Reset Password</button>
+            <a href="#" class="forgot-link" id="back-to-login" style="text-align: center; display: block; margin-top: 15px;">← Back to Login</a>
+        </form>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const forgotForm = document.getElementById('forgot-form');
+        const cardTitle = document.getElementById('card-title');
+        const forgotLink = document.getElementById('forgot-link');
+        const backToLogin = document.getElementById('back-to-login');
+
+        forgotLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            loginForm.style.display = 'none';
+            forgotForm.style.display = 'block';
+            cardTitle.innerText = 'Reset Password';
+            document.getElementById('forgot-email').focus();
+        });
+
+        backToLogin.addEventListener('click', function (e) {
+            e.preventDefault();
+            forgotForm.style.display = 'none';
+            loginForm.style.display = 'block';
+            cardTitle.innerText = 'User Login';
+            document.getElementById('email').focus();
+        });
+
+        loginForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            try {
+                const resp = await fetch('http://localhost:8000/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await resp.json();
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+                if (data.token) {
+                    localStorage.setItem('authToken', data.token);
+                    localStorage.setItem('voterId', data.voter_id);
+                    alert('Login successful!');
+                    window.location.href = 'activity.html';
+                }
+            } catch (err) {
+                alert(err.message || 'Login error');
+            }
+        });
+
+        forgotForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value.trim();
+            const dob = document.getElementById('forgot-dob').value.trim();
+            const new_password = document.getElementById('forgot-new-password').value;
+
+            try {
+                const resp = await fetch('http://localhost:8000/forgot_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, dob, new_password })
+                });
+                const data = await resp.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert('Password reset successfully! You can now login with your new password.');
+                    forgotForm.reset();
+                    forgotForm.style.display = 'none';
+                    loginForm.style.display = 'block';
+                    cardTitle.innerText = 'User Login';
+                    document.getElementById('email').value = email;
+                    document.getElementById('password').focus();
+                }
+            } catch (err) {
+                alert(err.message || 'Error resetting password');
+            }
+        });
+
+        function clampNumber(value, min, max) {
+            if (Number.isNaN(value)) return null;
+            return Math.min(max, Math.max(min, value));
+        }
+
+        function validateBsDateString(value) {
+            const match = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/.exec((value || '').trim());
+            if (!match) {
+                return { valid: false, message: 'Date must be in YYYY/MM/DD format (e.g., 2080/01/15)' };
+            }
+            const year = Number(match[1]);
+            const month = Number(match[2]);
+            const day = Number(match[3]);
+
+            if (Number.isNaN(year) || year < 1) return { valid: false, message: 'Year must be valid' };
+            if (Number.isNaN(month) || month < 1 || month > 12) return { valid: false, message: 'Month 1-12' };
+            if (Number.isNaN(day) || day < 1 || day > 32) return { valid: false, message: 'Day 1-32' };
+            return { valid: true, message: '' };
+        }
+
+        function formatDateInput(input) {
+            input.addEventListener('input', function (e) {
+                let value = e.target.value.replace(/[^\d/]/g, '').replace(/\/+/g, '/');
+                const parts = value.split('/');
+                let formatted = '';
+                if (parts[0]) {
+                    formatted = parts[0].substring(0, 4);
+                    if (parts[0].length >= 4 && parts.length === 1) formatted += '/';
+                    else if (parts.length > 1) {
+                        formatted += '/';
+                        if (parts[1]) {
+                            let rawMonth = parts[1].substring(0, 2);
+                            if (rawMonth.length === 2 || parts.length > 2) {
+                                const m = clampNumber(Number(rawMonth), 1, 12);
+                                rawMonth = m === null ? rawMonth : String(m).padStart(2, '0');
+                            }
+                            formatted += rawMonth;
+                            if (parts[1].length >= 2 && parts.length === 2) formatted += '/';
+                            else if (parts.length > 2) {
+                                formatted += '/';
+                                if (parts[2]) {
+                                    let rawDay = parts[2].substring(0, 2);
+                                    if (rawDay.length === 2) {
+                                        const d = clampNumber(Number(rawDay), 1, 32);
+                                        rawDay = d === null ? rawDay : String(d).padStart(2, '0');
+                                    }
+                                    formatted += rawDay;
+                                }
+                            }
+                        }
+                    }
+                }
+                e.target.value = formatted;
+            });
+        }
+        formatDateInput(document.getElementById('forgot-dob'));
+    </script>
+</body>
+</html>

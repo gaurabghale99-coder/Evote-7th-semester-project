@@ -3,6 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import time
+import psycopg2
+
+# Database connection settings – keep in sync with set_voter_password.py
+DB_CONFIG = {
+    "host": "localhost",
+    "dbname": "evote",
+    "user": "postgres",
+    "password": "gaurab4445",
+    "port": 5432,
+}
 
 from main import (
     recognize_face_once, mark_as_voted, gen_frames, 
@@ -128,3 +138,129 @@ def all_voters():
 @app.get("/age_group_summary")
 def age_group_summary():
     return get_age_group_summary()
+import bcrypt
+import secrets
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/login")
+def login(request: LoginRequest):
+    # Connect to DB
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    cur.execute("SELECT voter_id, password_hash FROM voters WHERE email = %s", (request.email,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return {"error": "Invalid credentials"}
+    voter_id, pwd_hash = row
+    if not bcrypt.checkpw(request.password.encode('utf-8'), pwd_hash.encode('utf-8')):
+        return {"error": "Invalid credentials"}
+    # Simple token generation (replace with JWT in production)
+    token = secrets.token_urlsafe(32)
+    return {"token": token, "voter_id": voter_id}
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    dob: str
+    new_password: str
+
+@app.post("/forgot_password")
+def forgot_password_endpoint(request: ForgotPasswordRequest):
+    import os
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        
+        # Select voter by email
+        cur.execute("SELECT voter_id, date_of_birth FROM voters WHERE email = %s", (request.email,))
+        row = cur.fetchone()
+        
+        if not row:
+            cur.close()
+            conn.close()
+            return {"error": "Email address not found in our records."}
+            
+        voter_id, db_dob = row
+        if not db_dob:
+            cur.close()
+            conn.close()
+            return {"error": "Date of Birth records are missing for this voter. Please contact admin."}
+            
+        # Standardize and compare DOB
+        db_dob_str = str(db_dob).strip().replace('-', '/')
+        input_dob_str = request.dob.strip().replace('-', '/')
+        
+        if db_dob_str != input_dob_str:
+            cur.close()
+            conn.close()
+            return {"error": "Incorrect Date of Birth for this email."}
+            
+        # Hash new password
+        pwd_hash = bcrypt.hashpw(request.new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        # Update password hash in DB
+        cur.execute("UPDATE voters SET password_hash = %s WHERE email = %s", (pwd_hash, request.email))
+        conn.commit()
+        
+        cur.close()
+        conn.close()
+        
+        # Also update voter_credentials.txt locally so it matches!
+        try:
+            cred_file = "voter_credentials.txt"
+            if os.path.exists(cred_file):
+                with open(cred_file, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                new_lines = []
+                updated = False
+                for line in lines:
+                    if line.startswith(f"{request.email}:"):
+                        new_lines.append(f"{request.email}: {request.new_password}\n")
+                        updated = True
+                    else:
+                        new_lines.append(line)
+                if not updated:
+                    new_lines.append(f"{request.email}: {request.new_password}\n")
+                with open(cred_file, "w", encoding="utf-8") as f:
+                    f.writelines(new_lines)
+        except Exception as file_err:
+            print(f"Error updating voter_credentials.txt: {file_err}")
+            
+        return {"status": "success", "message": "Password reset successfully."}
+        
+    except Exception as e:
+        print(f"Error resetting password: {e}")
+        return {"error": "Server error. Please try again."}
+
+@app.get("/voter_activity")
+def voter_activity(voter_id: str):
+    """Return basic activity info for a voter.
+    Includes name, voting status, constituency.
+    """
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT full_name, voted, parliamentary_constituency, date_of_birth FROM voters WHERE voter_id = %s",
+            (voter_id,)
+        )
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not row:
+            return {"error": "Voter not found"}
+        full_name, voted, constituency, dob = row
+        return {
+            "voter_id": voter_id,
+            "full_name": full_name,
+            "voted": voted,
+            "constituency": constituency,
+            "dob": str(dob) if dob else "N/A"
+        }
+    except Exception as e:
+        print(f"Error fetching voter activity: {e}")
+        return {"error": "Server error"}

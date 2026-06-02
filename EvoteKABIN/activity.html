@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voter Activity – E‑Vote</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <style>
+        .activity-card {
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            max-width: 850px;
+            margin: 80px auto;
+            animation: fadeIn 0.5s ease-in;
+            transition: max-width 0.3s ease;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .activity-card h2 {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+
+        .logout-btn {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #475569;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .table-section {
+            margin-top: 25px;
+        }
+
+        .table-title {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+            border-left: 5px solid var(--primary-color);
+            padding-left: 12px;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .activity-table th {
+            background-color: #f8fafc;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            padding: 16px 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .activity-table td {
+            padding: 18px 20px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .activity-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: capitalize;
+            text-align: center;
+        }
+
+        .badge-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .badge-info {
+            background-color: rgba(37, 99, 235, 0.1);
+            color: #2563eb;
+            border: 1px solid rgba(37, 99, 235, 0.25);
+        }
+
+        .badge-warning {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            font-weight: 700;
+        }
+
+        /* Not Voted Yet styling */
+        .not-voted-box {
+            text-align: center;
+            padding: 40px 20px;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        .warning-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .not-voted-title {
+            color: #ef4444;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .not-voted-nepali {
+            color: #475569;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 10px auto 35px;
+            font-family: inherit;
+        }
+
+        .process-btn {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="activity-card" id="activity-card">
+        <div class="card-header">
+            <h2 id="welcome">Loading...</h2>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        
+        <!-- Table Section (only visible if already voted) -->
+        <div class="table-section" style="display: none;">
+            <h3 class="table-title">User Activity</h3>
+            <div class="table-container">
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th>Face Recognition</th>
+                            <th>DOB</th>
+                            <th>Language</th>
+                            <th>Parliamentary Const</th>
+                            <th>Vote</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-success">Recognized</span></td>
+                            <td id="table-dob">-</td>
+                            <td><span class="badge badge-info" id="table-lang">English</span></td>
+                            <td id="table-const">-</td>
+                            <td id="table-vote">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Not Voted Yet Area (only visible if has not voted yet) -->
+        <div class="not-voted-box" id="not-voted-box" style="display: none;">
+            <span class="warning-icon">🗳️</span>
+            <h3 class="not-voted-title">You Haven't Voted Yet.</h3>
+            <p class="not-voted-nepali">
+                तपाईंले अझै मतदान गर्नुभएको छैन।
+            </p>
+            <button class="process-btn" onclick="window.location.href='index.html'">
+                Complete Voting Process Now
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('voterId');
+            window.location.href = 'login.html';
+        }
+
+        // Retrieve stored token and voterId from login
+        const token = localStorage.getItem('authToken');
+        const voterId = localStorage.getItem('voterId');
+        
+        // Retrieve selected language
+        const savedLang = localStorage.getItem('selectedLanguage') || 'en';
+        const langDisplay = savedLang === 'en' ? 'English' : 'Nepali';
+        document.getElementById('table-lang').innerText = langDisplay;
+
+        if (!voterId) {
+            document.getElementById('welcome').innerText = 'No voter information found';
+            document.querySelector('.table-section').style.display = 'none';
+            document.getElementById('not-voted-box').style.display = 'none';
+        } else {
+            // Fetch activity data
+            fetch(`http://localhost:8000/voter_activity?voter_id=${voterId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('welcome').innerText = data.error;
+                    document.querySelector('.table-section').style.display = 'none';
+                    document.getElementById('not-voted-box').style.display = 'none';
+                    return;
+                }
+                document.getElementById('welcome').innerText = `Welcome, ${data.full_name}`;
+                
+                const card = document.getElementById('activity-card');
+                
+                if (data.voted) {
+                    // Adjust card layout for table presentation
+                    card.style.maxWidth = '850px';
+                    document.querySelector('.table-section').style.display = 'block';
+                    document.getElementById('not-voted-box').style.display = 'none';
+                    
+                    // Populate DOB
+                    document.getElementById('table-dob').innerText = data.dob || 'N/A';
+                    
+                    // Populate Constituency
+                    document.getElementById('table-const').innerText = data.constituency || 'N/A';
+                    
+                    // Populate Vote status
+                    const voteTd = document.getElementById('table-vote');
+                    voteTd.innerHTML = '<span class="badge badge-success">successful</span>';
+                } else {
+                    // Hide table section and adjust layout for cleaner warning view
+                    card.style.maxWidth = '600px';
+                    document.querySelector('.table-section').style.display = 'none';
+                    document.getElementById('not-voted-box').style.display = 'block';
+                }
+            })
+            .catch(err => {
+                document.getElementById('welcome').innerText = 'Error loading activity';
+                console.error(err);
+            });
+        }
+    </script>
+</body>
+</html>

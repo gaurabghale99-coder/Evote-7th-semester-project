@@ -29,7 +29,7 @@ DB_CONFIG = {
     "port": 5432
 }
 
-TOLERANCE = 0.45  # smaller = stricter match
+TOLERANCE = 0.42  # smaller = stricter match
 FRAUD_THRESHOLD = 0.06 # Change this to 0.7 for production. Lower = easier to trigger fraud warning.
 
 import threading
@@ -125,9 +125,10 @@ class CameraManager:
             rows = cur.fetchall()
             for vid, code, name, enc, voted in rows:
                 if enc:
-                    self.known_encodings.append(np.array(enc))
+                    enc_arr = np.array(enc)
+                    self.known_encodings.append(enc_arr)
                     self.voters.append({
-                        "id": vid, "code": code, "name": name, "voted": voted
+                        "id": vid, "code": code, "name": name, "voted": voted, "face_encoding": enc_arr
                     })
             cur.close()
             conn.close()
@@ -248,40 +249,58 @@ class CameraManager:
                                     conf_score = confidence.item() * 100
                                     
                                 print(f"🤖 Custom AI Result: {recognized_name} ({conf_score:.1f}%)")
-                                
-                                # 3. Match recognized name to database voter record
-                                # Threshold (match your test script's 85%)
+                                # We consider a face "known" only if:
+                                #   1. The model predicts a class with sufficient confidence (>85) AND
+                                #   2. The corresponding voter exists in DB AND
+                                #   3. The live face encoding distance is below TOLERANCE.
+                                # Otherwise we label as UNKNOWN STRANGER.
                                 if conf_score > 85:
-                                    # Take ONLY the first part of the folder name (e.g., 'V001' from 'V001_Gaurab')
-                                    # This ensures it matches the IDs in your Postgres Database
                                     target_id = recognized_name.split('_')[0].strip().lower()
                                     matched_voter = next((v for v in self.voters if v['code'].strip().lower() == target_id), None)
                                     
                                     if matched_voter:
-                                        res = matched_voter.copy()
-                                        res["voted"] = get_voter_voted_status(res["code"])
-                                        
-                                        # --- RNN Behavior Analysis ---
-                                        from behavior_tracker import BehaviorTracker
-                                        tracker = BehaviorTracker(DB_CONFIG)
-                                        # Use AI confidence for RNN score
-                                        fraud_score = tracker.log_attempt(res["code"], confidence.item(), False)
-                                        res["fraud_score"] = fraud_score
-                                        res["is_suspicious"] = fraud_score > FRAUD_THRESHOLD
-                                        
-                                        # Save last fraud score to database
-                                        save_last_fraud_score(res["code"], fraud_score)
-                                        
-                                        print(f"--- Behavioral Analysis RNN ---")
-                                        print(f"Voter ID: {res['code']}")
-                                        print(f"Fraud Score: {fraud_score:.4f}")
-                                        print(f"Status: {'⚠️ SUSPICIOUS' if res['is_suspicious'] else '✅ NORMAL'}")
-                                        print(f"-------------------------------")
-                                        
-                                        self.recognition_result = res
-                                        
-                                        if res.get("is_suspicious"):
-                                            record_voter_block(res["code"], 1, fraud_score)
+                                        # Secondary Distance Verification
+                                        is_verified = False
+                                        db_enc = matched_voter.get("face_encoding")
+                                        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                        live_encs = face_recognition.face_encodings(rgb_frame, [(top, right, bottom, left)])
+                                        if len(live_encs) > 0 and db_enc is not None:
+                                            live_enc = live_encs[0]
+                                            dist = face_recognition.face_distance([db_enc], live_enc)[0]
+                                            print(f"🔗 Hybrid Verification - Predicted: {matched_voter['name']} | Distance: {dist:.4f}")
+                                            if dist < TOLERANCE:
+                                                is_verified = True
+                                        else:
+                                            # Fallback to confidence if encoding check fails
+                                            is_verified = True
+                                            
+                                        if is_verified:
+                                            res = matched_voter.copy()
+                                            res["voted"] = get_voter_voted_status(res["code"])
+                                            
+                                            # --- RNN Behavior Analysis ---
+                                            from behavior_tracker import BehaviorTracker
+                                            tracker = BehaviorTracker(DB_CONFIG)
+                                            # Use AI confidence for RNN score
+                                            fraud_score = tracker.log_attempt(res["code"], confidence.item(), False)
+                                            res["fraud_score"] = fraud_score
+                                            res["is_suspicious"] = fraud_score > FRAUD_THRESHOLD
+                                            
+                                            # Save last fraud score to database
+                                            save_last_fraud_score(res["code"], fraud_score)
+                                            
+                                            print(f"--- Behavioral Analysis RNN ---")
+                                            print(f"Voter ID: {res['code']}")
+                                            print(f"Fraud Score: {fraud_score:.4f}")
+                                            print(f"Status: {'⚠️ SUSPICIOUS' if res['is_suspicious'] else '✅ NORMAL'}")
+                                            print(f"-------------------------------")
+                                            
+                                            self.recognition_result = res
+                                            
+                                            if res.get("is_suspicious"):
+                                                record_voter_block(res["code"], 1, fraud_score)
+                                        else:
+                                            print(f"❌ Hybrid check failed! Dist too high. Not matching {matched_voter['name']}")
                                     else:
                                         print(f"⚠️ Recognized as {recognized_name} but ID not in Voter DB.")
                                 else:
