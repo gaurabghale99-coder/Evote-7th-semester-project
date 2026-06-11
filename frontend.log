@@ -1,6 +1,0 @@
-::1 - - [23/May/2026 14:49:20] "GET /language.html HTTP/1.1" 200 -
-::1 - - [23/May/2026 14:49:20] "GET /js/language.js HTTP/1.1" 200 -
-::1 - - [23/May/2026 14:49:23] "GET /register.html HTTP/1.1" 200 -
-::1 - - [23/May/2026 14:50:11] "GET /ballot.html HTTP/1.1" 200 -
-::1 - - [23/May/2026 14:50:29] "GET /success.html HTTP/1.1" 200 -
-::1 - - [23/May/2026 14:50:31] "GET /index.html HTTP/1.1" 200 -

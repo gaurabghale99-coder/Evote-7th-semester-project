@@ -18,6 +18,9 @@ const DEFAULT_PARTIES = [
 ];
 
 document.addEventListener('DOMContentLoaded', function () {
+    // Back navigation is natively prevented because all navigations use window.location.replace()
+    // which never adds entries to the browser history stack.
+
     // 1. Force Redirect to Home on Refresh
     const isIndex = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/') || window.location.pathname === '';
     const isSuccess = window.location.pathname.endsWith('success.html');
@@ -685,6 +688,44 @@ function initializeRegistrationPage() {
     if (dobEn) formatDateInput(dobEn);
     if (dobNp) formatDateInput(dobNp);
 
+    // --- Auto-fill Voter ID and Name from face recognition ---
+    const voterData = JSON.parse(localStorage.getItem('voterData') || '{}');
+    if (voterData.voterId || voterData.voterCode || voterData.fullName) {
+        const voterIdValue = (voterData.voterCode || voterData.voterId || '').toString().trim().toUpperCase();
+        const fullNameValue = (voterData.fullName || '').toString().trim();
+
+        // English form fields
+        const voterIdEn = document.getElementById('voter-id-en');
+        const fullNameEn = document.getElementById('full-name-en');
+
+        // Nepali form fields
+        const voterIdNp = document.getElementById('voter-id-np');
+        const fullNameNp = document.getElementById('full-name-np');
+
+        // Auto-fill and lock fields for both forms
+        [voterIdEn, voterIdNp].forEach(input => {
+            if (input && voterIdValue) {
+                input.value = voterIdValue;
+                input.readOnly = true;
+            }
+        });
+
+        [fullNameEn, fullNameNp].forEach(input => {
+            if (input && fullNameValue) {
+                input.value = fullNameValue;
+                input.readOnly = true;
+            }
+        });
+
+
+
+        // Focus on DOB field since it's the only one the voter needs to fill
+        const activeDob = savedLang === 'np' ? dobNp : dobEn;
+        if (activeDob) {
+            setTimeout(() => activeDob.focus(), 300);
+        }
+    }
+
     if (registrationFormEn) {
         registrationFormEn.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -1334,9 +1375,41 @@ function renderAgeGroupTable() {
     const container = document.getElementById('age-group-summary-container');
     if (!container) return;
 
-    fetch("http://localhost:8000/age_group_summary")
+    fetch("http://localhost:8000/all_voters")
         .then(res => res.json())
-        .then(data => {
+        .then(voters => {
+            const votes = getVotes(); // Reads from localStorage
+            const summary = {
+                "18-25": 0,
+                "26-35": 0,
+                "36-45": 0,
+                "46-60": 0,
+                "60 above": 0
+            };
+
+            const currentBsYear = 2082;
+
+            votes.forEach(vote => {
+                const voterId = (vote.voterId || '').toString().trim().toLowerCase();
+                const voter = voters.find(v => (v.voter_id || '').toString().trim().toLowerCase() === voterId);
+                
+                if (voter && voter.date_of_birth) {
+                    try {
+                        const dobStr = voter.date_of_birth.toString();
+                        const year = parseInt(dobStr.substring(0, 4));
+                        const age = currentBsYear - year;
+
+                        if (age >= 18 && age <= 25) summary["18-25"] += 1;
+                        else if (age >= 26 && age <= 35) summary["26-35"] += 1;
+                        else if (age >= 36 && age <= 45) summary["36-45"] += 1;
+                        else if (age >= 46 && age <= 60) summary["46-60"] += 1;
+                        else if (age > 60) summary["60 above"] += 1;
+                    } catch (e) {
+                        console.error("Error parsing DOB for voter:", voter, e);
+                    }
+                }
+            });
+
             const order = ["18-25", "26-35", "36-45", "46-60", "60 above"];
 
             let tableHtml = `
@@ -1354,7 +1427,7 @@ function renderAgeGroupTable() {
                 tableHtml += `
                     <tr>
                         <td>${group}</td>
-                        <td>${data[group] || 0}</td>
+                        <td>${summary[group]}</td>
                     </tr>
                 `;
             });
@@ -1367,7 +1440,7 @@ function renderAgeGroupTable() {
             container.innerHTML = tableHtml;
         })
         .catch(err => {
-            console.error("Failed to fetch age group summary:", err);
+            console.error("Failed to fetch voters for age group summary:", err);
             container.innerHTML = "<p class='admin-error'>Failed to load age summary</p>";
         });
 }
@@ -1386,15 +1459,15 @@ function renderVoterTable() {
             tableBody.innerHTML = '';
             voters.forEach((voter, idx) => {
                 const row = document.createElement('tr');
-                
+
                 // Color coding for fraud score
                 let scoreColor = '#10b981'; // green
                 let statusText = 'Normal ✅';
                 if (voter.last_fraud_score > 0.05) { scoreColor = '#f59e0b'; statusText = 'Warning ⚠️'; }
                 if (voter.last_fraud_score > 0.1) { scoreColor = '#ef4444'; statusText = 'Suspicious 🚨'; }
-                
-                const blockedTime = voter.is_blocked ? 
-                    `<span style="color: #ef4444; font-weight: bold;">${voter.blocked_until.split('.')[0]}</span>` : 
+
+                const blockedTime = voter.is_blocked ?
+                    `<span style="color: #ef4444; font-weight: bold;">${voter.blocked_until.split('.')[0]}</span>` :
                     '<span style="color: #94a3b8;">-</span>';
 
                 row.innerHTML = `

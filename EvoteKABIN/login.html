@@ -100,7 +100,7 @@
             </div>
             <button type="submit" class="btn btn-primary">Log In</button>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                <a href="index.html" class="back-link">← Back to Home</a>
+                <a href="#" class="back-link" onclick="window.location.replace('index.html'); return false;">← Back to Home</a>
                 <a href="#" class="forgot-link" id="forgot-link" style="margin-top: 15px;">Forgot password?</a>
             </div>
         </form>
@@ -125,6 +125,9 @@
     </div>
 
     <script>
+        // Back navigation is natively prevented because all navigations use window.location.replace()
+        // which never adds entries to the browser history stack.
+
         const loginForm = document.getElementById('login-form');
         const forgotForm = document.getElementById('forgot-form');
         const cardTitle = document.getElementById('card-title');
@@ -166,7 +169,7 @@
                     localStorage.setItem('authToken', data.token);
                     localStorage.setItem('voterId', data.voter_id);
                     alert('Login successful!');
-                    window.location.href = 'activity.html';
+                    window.location.replace('activity.html');
                 }
             } catch (err) {
                 alert(err.message || 'Login error');

@@ -520,6 +520,8 @@ input::-webkit-search-results-decoration {
     border-color: var(--danger-color);
 }
 
+
+
 .form-actions {
     display: flex;
     justify-content: space-between;
